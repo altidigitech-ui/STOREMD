@@ -1,423 +1,420 @@
-# Skill: Agent Loop
+# Skill: Scan Pipeline
 
-> **Utilise ce skill quand tu travailles sur l'agent IA :**
-> **Ajouter/modifier un scanner, comprendre le pipeline DETECT→ANALYZE→ACT→LEARN,
-> modifier l'orchestrateur LangGraph, toucher au feedback loop Ouroboros.**
+> **Utilise ce skill quand tu travailles sur l'orchestration des scans :**
+> **Séquencement des scanners, parallélisme, groupes d'exécution,
+> error handling scan, Celery tasks, résultats partiels.**
 
 ---
 
 ## QUAND UTILISER
 
-- Ajouter un nouveau node dans le graph LangGraph
-- Modifier le flow de l'orchestrateur
-- Comprendre comment un scan s'exécute de bout en bout
-- Implémenter la couche LEARN (feedback)
-- Débugger un scan qui échoue dans le pipeline
-- Intégrer un nouveau scanner dans le flow
+- Modifier l'ordre d'exécution des scanners
+- Ajouter un scanner au pipeline (voir aussi `/add-scanner` command)
+- Débugger un scan qui timeout ou échoue partiellement
+- Comprendre le séquencement parallel vs séquentiel
+- Modifier les Celery tasks de scan
 
 ---
 
-## LES 4 COUCHES
+## ARCHITECTURE DU PIPELINE
+
+3 groupes d'exécution, dans l'ordre :
 
 ```
-1. DETECT   → Quelque chose se passe (webhook, cron, action manuelle)
-2. ANALYZE  → L'agent comprend ce qui se passe (scanners + Claude API + Mem0)
-3. ACT      → L'agent fait quelque chose (notifications, fixes, reports)
-4. LEARN    → L'agent s'améliore (feedback merchant → Mem0 → Ouroboros)
+TRIGGER (manual / cron / webhook)
+    │
+    ▼
+┌──────────────────────────────────────────────┐
+│ GROUPE 1 — Shopify API                       │
+│ Exécution : PARALLÈLE (asyncio.gather)       │
+│ Contrainte : semaphore 4 requêtes simultanées │
+│ Timeout : 120s par scanner                   │
+│                                               │
+│ health_scorer        ─┐                       │
+│ app_impact           ─┤                       │
+│ residue_detector     ─┤  Tous partagent       │
+│ ghost_billing        ─┤  le même              │
+│ code_weight          ─┤  ShopifyClient        │
+│ security_monitor     ─┤  (même token,         │
+│ pixel_health         ─┤   même semaphore)     │
+│ listing_analyzer     ─┤  (si module listings) │
+│ agentic_readiness    ─┤  (si module agentic)  │
+│ hs_code_validator    ─┘  (si module agentic)  │
+└──────────────────┬───────────────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────────────┐
+│ GROUPE 2 — External checks                  │
+│ Exécution : PARALLÈLE (asyncio.gather)       │
+│ Contrainte : aucune (pas de rate limit)      │
+│ Timeout : 60s par scanner                    │
+│                                               │
+│ broken_links         ─┐  HTTP HEAD requests   │
+│ email_health         ─┤  DNS lookups          │
+│ bot_traffic          ─┤  Log analysis         │
+│ accessibility        ─┘  HTML parse statique  │
+└──────────────────┬───────────────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────────────┐
+│ GROUPE 3 — Browser automation (Pro only)     │
+│ Exécution : SÉQUENTIEL (un à la fois)        │
+│ Contrainte : Playwright lourd, 1 browser     │
+│ Timeout : 90s par scanner                    │
+│                                               │
+│ 1. visual_store_test     (screenshots + diff)│
+│ 2. real_user_simulation  (parcours complet)  │
+│ 3. accessibility_live    (WCAG rendu réel)   │
+└──────────────────┬───────────────────────────┘
+                   │
+                   ▼
+              RÉSULTATS AGRÉGÉS
 ```
-
-Ce n'est PAS un flow linéaire simple. C'est un graph LangGraph avec des nodes et des edges conditionnels.
 
 ---
 
-## GRAPH LANGGRAPH — FLOW COMPLET
-
-```
-START
-  │
-  ▼
-[detect]          Identifier le trigger, charger les données de base du store
-  │
-  ▼
-[load_memory]     Récupérer le contexte Mem0 (prefs merchant, historique, cross-store)
-  │
-  ▼
-[run_scanners]    Exécuter les analyzers selon les modules demandés (parallel groups)
-  │
-  ▼
-[analyze]         Claude API interprète les résultats avec le contexte Mem0
-  │
-  ▼
-[generate_fixes]  Claude API génère les recommandations en langage simple
-  │
-  ▼
-[should_notify]   Conditionnel : y a-t-il des issues critiques ou un score drop ?
-  │                     │
-  ├─ OUI ──────► [notify]     Envoyer push/email/in-app
-  │                     │
-  ├─ NON ──────────────►│
-  │                     │
-  ▼                     ▼
-[save_results]    Persister scan + issues + score en DB
-  │
-  ▼
-END
-```
-
-### Implémentation
+## IMPLÉMENTATION — EXÉCUTION PAR GROUPE
 
 ```python
-# app/agent/orchestrator.py
+# app/agent/orchestrator.py (node run_scanners)
 
-from langgraph.graph import StateGraph, END
-from app.agent.state import AgentState
+import asyncio
+from app.agent.analyzers.base import BaseScanner, ScannerResult
 
-class ScanOrchestrator:
-    def __init__(self, memory: StoreMemory, shopify: ShopifyClient,
-                 supabase: SupabaseClient):
-        self.memory = memory
-        self.shopify = shopify
-        self.supabase = supabase
-        self.scanners = ScannerRegistry()
+async def run_scanners(self, state: AgentState) -> AgentState:
+    """Exécute les scanners par groupe : parallel API, parallel external, sequential browser."""
+    plan = await self.get_merchant_plan(state.merchant_id)
+    all_scanners = self.scanners.get_for_modules(state.modules)
+    eligible = [s for s in all_scanners if await s.should_run(state.modules, plan)]
 
-    def build_graph(self) -> CompiledGraph:
-        graph = StateGraph(AgentState)
+    # Séparer par groupe
+    group_api = [s for s in eligible if s.group == "shopify_api"]
+    group_ext = [s for s in eligible if s.group == "external"]
+    group_browser = [s for s in eligible if s.group == "browser"]
 
-        graph.add_node("detect", self.detect)
-        graph.add_node("load_memory", self.load_memory)
-        graph.add_node("run_scanners", self.run_scanners)
-        graph.add_node("analyze", self.analyze)
-        graph.add_node("generate_fixes", self.generate_fixes)
-        graph.add_node("notify", self.notify)
-        graph.add_node("save_results", self.save_results)
+    # Groupe 1 — Shopify API (parallèle)
+    await self._run_parallel(group_api, state, timeout=120)
 
-        graph.set_entry_point("detect")
-        graph.add_edge("detect", "load_memory")
-        graph.add_edge("load_memory", "run_scanners")
-        graph.add_edge("run_scanners", "analyze")
-        graph.add_edge("analyze", "generate_fixes")
+    # Groupe 2 — External (parallèle)
+    await self._run_parallel(group_ext, state, timeout=60)
 
-        # Conditionnel : notifier seulement si nécessaire
-        graph.add_conditional_edges(
-            "generate_fixes",
-            self.should_notify,
-            {"notify": "notify", "skip": "save_results"},
-        )
-        graph.add_edge("notify", "save_results")
-        graph.add_edge("save_results", END)
+    # Groupe 3 — Browser (séquentiel, Pro only)
+    await self._run_sequential(group_browser, state, timeout=90)
 
-        return graph.compile()
+    return state
 
-    # --- NODES ---
 
-    async def detect(self, state: AgentState) -> AgentState:
-        """Couche 1 — DETECT. Charger les données de base du store."""
-        store = await self.supabase.table("stores").select("*").eq(
-            "id", state.store_id
-        ).single().execute()
-        state.store_data = store.data
-        logger.info("detect", store_id=state.store_id, trigger=state.trigger,
-                     modules=state.modules)
-        return state
+async def _run_parallel(
+    self, scanners: list[BaseScanner], state: AgentState, timeout: int
+) -> None:
+    """Exécute des scanners en parallèle avec timeout individuel."""
+    if not scanners:
+        return
 
-    async def load_memory(self, state: AgentState) -> AgentState:
-        """Charger le contexte Mem0 avant l'analyse."""
+    async def run_one(scanner: BaseScanner) -> tuple[str, ScannerResult | None]:
         try:
-            state.historical_context = await self.memory.recall(
-                state.merchant_id,
-                f"store health scan {' '.join(state.modules)}",
+            result = await asyncio.wait_for(
+                scanner.scan(state.store_id, self.shopify, state.historical_context),
+                timeout=timeout,
             )
-            state.merchant_preferences = await self.memory.recall(
-                state.merchant_id,
-                "preferences accepted rejected recommendation patterns",
-            )
-            state.cross_store_signals = await self.memory.recall_cross_store(
-                "app risks alerts global patterns",
-            )
+            logger.info("scanner_completed", scanner=scanner.name,
+                        issues=len(result.issues))
+            return scanner.name, result
+        except asyncio.TimeoutError:
+            logger.warning("scanner_timeout", scanner=scanner.name, timeout=timeout)
+            state.errors.append(f"Scanner {scanner.name} timed out after {timeout}s")
+            return scanner.name, None
         except Exception as exc:
-            # Mem0 down → continuer sans mémoire (graceful degradation)
-            logger.warning("mem0_unavailable", error=str(exc))
-            state.errors.append(f"Mem0 unavailable: {exc}")
-        return state
+            logger.warning("scanner_failed", scanner=scanner.name, error=str(exc))
+            state.errors.append(f"Scanner {scanner.name}: {exc}")
+            return scanner.name, None
 
-    async def run_scanners(self, state: AgentState) -> AgentState:
-        """Couche 2a — Exécuter les scanners par groupe."""
-        plan = await self.get_merchant_plan(state.merchant_id)
+    results = await asyncio.gather(*[run_one(s) for s in scanners])
 
-        for scanner in self.scanners.get_for_modules(state.modules):
-            if not await scanner.should_run(state.modules, plan):
-                continue
-            try:
-                result = await scanner.scan(
-                    state.store_id, self.shopify, state.historical_context
-                )
-                state.scanner_results[scanner.name] = result
-            except Exception as exc:
-                logger.warning("scanner_failed", scanner=scanner.name, error=str(exc))
-                state.errors.append(f"Scanner {scanner.name}: {exc}")
-                # Continuer — un scanner qui échoue ne bloque pas les autres
-        return state
+    for name, result in results:
+        if result is not None:
+            state.scanner_results[name] = result
 
-    async def analyze(self, state: AgentState) -> AgentState:
-        """Couche 2b — Claude API interprète les résultats."""
-        prompt = self.build_analysis_prompt(state)
+
+async def _run_sequential(
+    self, scanners: list[BaseScanner], state: AgentState, timeout: int
+) -> None:
+    """Exécute des scanners séquentiellement (browser automation)."""
+    for scanner in scanners:
         try:
-            response = await claude_analyze(prompt)
-            state.analysis_text = response
-            state.score = self.calculate_composite_score(state.scanner_results)
-            state.mobile_score = self.extract_mobile_score(state.scanner_results)
-            state.desktop_score = self.extract_desktop_score(state.scanner_results)
-            state.issues = self.extract_issues(state.scanner_results)
-        except AgentError as exc:
-            logger.error("claude_analysis_failed", error=str(exc))
-            # Fallback : score rules-based sans Claude
-            state.score = self.calculate_score_fallback(state.scanner_results)
-            state.issues = self.extract_issues(state.scanner_results)
-            state.errors.append(f"Claude API: {exc}")
-        return state
-
-    async def generate_fixes(self, state: AgentState) -> AgentState:
-        """Couche 3a — Générer les recommandations."""
-        for issue in state.issues:
-            try:
-                fix = await self.generate_fix_for_issue(issue, state)
-                state.fixes.append(fix)
-            except Exception as exc:
-                logger.warning("fix_generation_failed", issue=issue.title, error=str(exc))
-        return state
-
-    def should_notify(self, state: AgentState) -> str:
-        """Conditionnel : notifier si issues critiques ou score drop."""
-        has_critical = any(i.severity == "critical" for i in state.issues)
-        # Score drop détecté via la baseline Mem0
-        score_dropped = self.detect_score_drop(state)
-        if has_critical or score_dropped:
-            return "notify"
-        return "skip"
-
-    async def notify(self, state: AgentState) -> AgentState:
-        """Couche 3b — Envoyer les notifications."""
-        # Respecter la limite de notifications par semaine
-        if await self.can_notify(state.merchant_id):
-            await self.send_notifications(state)
-            state.notifications_sent.append("push")
-        return state
-
-    async def save_results(self, state: AgentState) -> AgentState:
-        """Persister les résultats en DB."""
-        await self.update_scan_record(state)
-        await self.insert_issues(state)
-        await self.insert_fixes(state)
-        # Mettre à jour la baseline dans Mem0
-        await self.memory.remember(
-            state.merchant_id,
-            f"Scan completed. Score: {state.score}. "
-            f"Issues: {len(state.issues)} ({state.issues_critical_count} critical). "
-            f"Modules: {state.modules}.",
-        )
-        return state
+            result = await asyncio.wait_for(
+                scanner.scan(state.store_id, self.shopify, state.historical_context),
+                timeout=timeout,
+            )
+            state.scanner_results[scanner.name] = result
+            logger.info("scanner_completed", scanner=scanner.name)
+        except asyncio.TimeoutError:
+            logger.warning("scanner_timeout", scanner=scanner.name, timeout=timeout)
+            state.errors.append(f"Scanner {scanner.name} timed out after {timeout}s")
+        except Exception as exc:
+            logger.warning("scanner_failed", scanner=scanner.name, error=str(exc))
+            state.errors.append(f"Scanner {scanner.name}: {exc}")
 ```
 
 ---
 
-## SCANNER REGISTRY
+## BASESCANNER — CONTRAT
 
-Le registre centralise tous les scanners et les organise par module :
+Tous les scanners héritent de `BaseScanner` et implémentent `scan()` :
 
 ```python
-# app/agent/analyzers/__init__.py
+# app/agent/analyzers/base.py
 
-from app.agent.analyzers.base import BaseScanner
-from app.agent.analyzers.health_scorer import HealthScorer
-from app.agent.analyzers.app_impact import AppImpactScanner
-from app.agent.analyzers.bot_traffic import BotTrafficScanner
-# ... tous les scanners
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from app.models.scan import ScanIssue
 
-class ScannerRegistry:
-    """Registre de tous les scanners disponibles."""
+@dataclass
+class ScannerResult:
+    """Résultat d'un scanner individuel."""
+    scanner_name: str
+    issues: list[ScanIssue] = field(default_factory=list)
+    metrics: dict = field(default_factory=dict)    # données brutes (scores, counts, etc.)
+    metadata: dict = field(default_factory=dict)   # debug info
 
-    def __init__(self):
-        self._scanners: list[BaseScanner] = [
-            # Module Health
-            HealthScorer(),
-            AppImpactScanner(),
-            BotTrafficScanner(),
-            ResidueDetector(),
-            GhostBillingDetector(),
-            CodeWeightScanner(),
-            SecurityMonitor(),
-            PixelHealthScanner(),
-            EmailHealthScanner(),
-            TrendAnalyzer(),
 
-            # Module Listings
-            ListingAnalyzer(),
+class BaseScanner(ABC):
+    """Classe de base pour tous les scanners StoreMD."""
 
-            # Module Agentic
-            AgenticReadinessScanner(),
-            HSCodeValidator(),
+    name: str          # "health_scorer", "app_impact", etc.
+    module: str        # "health", "listings", "agentic", "compliance", "browser"
+    group: str         # "shopify_api", "external", "browser"
+    requires_plan: str # "free", "starter", "pro"
 
-            # Module Compliance
-            AccessibilityScanner(),
-            BrokenLinksScanner(),
+    @abstractmethod
+    async def scan(
+        self,
+        store_id: str,
+        shopify: ShopifyClient,
+        memory_context: list[dict],
+    ) -> ScannerResult:
+        """Exécute le scan. Retourne les issues et métriques.
 
-            # Module Browser (Pro only, séquentiel)
-            VisualStoreTest(),
-            RealUserSimulation(),
-            AccessibilityLiveTest(),
+        RÈGLES :
+        - Ne JAMAIS raise une exception qui bloque les autres scanners
+        - Ne JAMAIS appeler Claude API (c'est le job du node analyze)
+        - Ne JAMAIS écrire en DB (c'est le job du node save_results)
+        - Ne JAMAIS envoyer de notification (c'est le job du node notify)
+        - Toujours retourner un ScannerResult, même vide
+        """
+        ...
+
+    async def should_run(self, modules: list[str], plan: str) -> bool:
+        """Vérifie si ce scanner doit s'exécuter."""
+        if self.module not in modules:
+            return False
+        plan_hierarchy = {"free": 0, "starter": 1, "pro": 2, "agency": 3}
+        return plan_hierarchy.get(plan, 0) >= plan_hierarchy.get(self.requires_plan, 0)
+```
+
+### Exemple : implémenter un scanner
+
+```python
+# app/agent/analyzers/ghost_billing.py
+
+class GhostBillingDetector(BaseScanner):
+    name = "ghost_billing"
+    module = "health"
+    group = "shopify_api"
+    requires_plan = "starter"
+
+    async def scan(
+        self, store_id: str, shopify: ShopifyClient, memory_context: list[dict]
+    ) -> ScannerResult:
+        # 1. Récupérer les charges actifs
+        charges = await shopify.rest_get("recurring_application_charges")
+        active_charges = [
+            c for c in charges.get("recurring_application_charges", [])
+            if c["status"] == "active"
         ]
 
-    def get_for_modules(self, modules: list[str]) -> list[BaseScanner]:
-        """Retourne les scanners pour les modules demandés, triés par groupe."""
-        return [s for s in self._scanners if s.module in modules]
+        # 2. Récupérer les apps installées
+        apps_data = await shopify.graphql(FETCH_APPS_QUERY)
+        installed_app_names = {
+            edge["node"]["app"]["title"]
+            for edge in apps_data["appInstallations"]["edges"]
+        }
 
-    def get_by_name(self, name: str) -> BaseScanner | None:
-        return next((s for s in self._scanners if s.name == name), None)
-```
+        # 3. Comparer : charges sans app correspondante = ghost
+        issues = []
+        for charge in active_charges:
+            if charge["name"] not in installed_app_names:
+                issues.append(ScanIssue(
+                    module="health",
+                    scanner="ghost_billing",
+                    severity="major",
+                    title=f"Ghost billing: {charge['name']} (${charge['price']}/month)",
+                    description=(
+                        f"App '{charge['name']}' is no longer installed but still "
+                        f"charging ${charge['price']}/month since {charge['created_at'][:10]}."
+                    ),
+                    impact=f"${charge['price']}/month lost",
+                    fix_type="manual",
+                    fix_description="Cancel this charge in Shopify Admin → Settings → Billing",
+                    auto_fixable=False,
+                    context={
+                        "charge_id": charge["id"],
+                        "charge_name": charge["name"],
+                        "charge_amount": charge["price"],
+                        "charge_since": charge["created_at"],
+                    },
+                ))
 
----
-
-## CLAUDE API ANALYSIS — PROMPT PATTERN
-
-```python
-def build_analysis_prompt(self, state: AgentState) -> str:
-    return f"""You are StoreMD, an AI agent that diagnoses Shopify store health.
-
-STORE: {state.store_data.get('name')} ({state.store_data.get('shopify_shop_domain')})
-THEME: {state.store_data.get('theme_name')}
-APPS: {state.store_data.get('apps_count')} installed
-PRODUCTS: {state.store_data.get('products_count')}
-
-SCAN RESULTS:
-{json.dumps(state.scanner_results, indent=2, default=str)}
-
-MERCHANT HISTORY (from memory):
-{json.dumps(state.historical_context, indent=2, default=str)}
-
-MERCHANT PREFERENCES:
-{json.dumps(state.merchant_preferences, indent=2, default=str)}
-
-INSTRUCTIONS:
-1. Analyze the scan results in context of the merchant's history and preferences.
-2. Identify the top 3 most impactful issues.
-3. For each issue, provide a clear recommendation in simple language.
-4. If the merchant has previously rejected similar recommendations, suggest alternatives.
-5. Note any trends (improving, degrading, stable) based on historical data.
-6. Keep recommendations actionable — what to do, not what to learn.
-
-Respond in JSON format:
-{{
-  "summary": "One paragraph overall health assessment",
-  "trend": "up|down|stable",
-  "top_issues": [
-    {{
-      "title": "...",
-      "severity": "critical|major|minor",
-      "impact": "...",
-      "recommendation": "...",
-      "fix_type": "one_click|manual|developer"
-    }}
-  ]
-}}"""
-```
-
----
-
-## COUCHE LEARN — OUROBOROS
-
-Le feedback est déclenché par le merchant dans le frontend (accept/reject sur chaque issue).
-
-```python
-# app/agent/learner.py
-
-class OuroborosLearner:
-    def __init__(self, memory: StoreMemory):
-        self.memory = memory
-
-    async def process_feedback(
-        self, merchant_id: str, issue_id: str,
-        accepted: bool, reason: str | None = None,
-        reason_category: str | None = None,
-    ):
-        # 1. Stocker en DB (table feedback)
-        await self.save_feedback(merchant_id, issue_id, accepted, reason, reason_category)
-
-        # 2. Stocker dans Mem0 (pour le contexte du prochain scan)
-        issue = await self.get_issue(issue_id)
-        context = (
-            f"Recommendation '{issue.title}' (type: {issue.scanner}, "
-            f"severity: {issue.severity}): "
+        return ScannerResult(
+            scanner_name=self.name,
+            issues=issues,
+            metrics={
+                "active_charges": len(active_charges),
+                "ghost_charges": len(issues),
+                "total_ghost_monthly": sum(
+                    float(i.context["charge_amount"]) for i in issues
+                ),
+            },
         )
-        if accepted:
-            context += "ACCEPTED by merchant."
-        else:
-            context += f"REJECTED by merchant. Reason: {reason or reason_category or 'unknown'}."
-
-        await self.memory.remember(merchant_id, context)
-
-        # 3. Vérifier si un pattern émerge
-        feedback_count = await self.get_feedback_count(merchant_id)
-        if feedback_count >= 10 and feedback_count % 10 == 0:
-            await self.analyze_patterns(merchant_id)
-
-    async def analyze_patterns(self, merchant_id: str):
-        """Tous les 10 feedbacks, analyser les patterns."""
-        feedbacks = await self.get_recent_feedbacks(merchant_id, limit=50)
-
-        # Calculer le taux d'acceptation par type de recommandation
-        by_type: dict[str, dict] = {}
-        for fb in feedbacks:
-            t = fb["recommendation_type"]
-            if t not in by_type:
-                by_type[t] = {"accepted": 0, "rejected": 0}
-            if fb["accepted"]:
-                by_type[t]["accepted"] += 1
-            else:
-                by_type[t]["rejected"] += 1
-
-        # Stocker le pattern dans Mem0
-        patterns = []
-        for rec_type, counts in by_type.items():
-            total = counts["accepted"] + counts["rejected"]
-            rate = counts["accepted"] / total if total > 0 else 0
-            if rate < 0.3:
-                patterns.append(f"Merchant rejects '{rec_type}' recommendations (rate: {rate:.0%})")
-            elif rate > 0.8:
-                patterns.append(f"Merchant likes '{rec_type}' recommendations (rate: {rate:.0%})")
-
-        if patterns:
-            await self.memory.remember(
-                merchant_id,
-                f"Preference patterns detected: {'; '.join(patterns)}",
-            )
 ```
 
 ---
 
-## AJOUTER UN NOUVEAU NODE AU GRAPH
-
-Si tu dois ajouter un node (ex: un step de validation post-scan) :
-
-1. Créer la méthode async dans `ScanOrchestrator`
-2. `graph.add_node("new_node", self.new_method)`
-3. Ajouter les edges (d'où vient-on, où va-t-on)
-4. Mettre à jour `AgentState` si le node produit des données
-5. Tester le graph avec un state minimal
+## SCAN ISSUE — FORMAT
 
 ```python
-# Exemple : ajouter un node de validation
-graph.add_node("validate_results", self.validate_results)
-graph.add_edge("run_scanners", "validate_results")
-graph.add_edge("validate_results", "analyze")
+# app/models/scan.py
+
+@dataclass
+class ScanIssue:
+    module: str                    # "health", "listings", etc.
+    scanner: str                   # "ghost_billing", "app_impact", etc.
+    severity: str                  # "critical", "major", "minor", "info"
+    title: str                     # Court, descriptif
+    description: str               # Détail complet
+    impact: str | None = None      # "+1.8s load time", "$9.99/month lost"
+    impact_value: float | None = None   # 1.8, 9.99 (pour tri)
+    impact_unit: str | None = None      # "seconds", "dollars"
+    fix_type: str | None = None    # "one_click", "manual", "developer"
+    fix_description: str | None = None
+    auto_fixable: bool = False
+    context: dict = field(default_factory=dict)  # données spécifiques
 ```
+
+### Severity guidelines
+
+| Severity | Quand l'utiliser | Exemples |
+|----------|-----------------|----------|
+| `critical` | Impact direct sur le revenue ou la sécurité | App injecte >500KB JS, SSL expiré, ghost billing >$50/mois |
+| `major` | Impact significatif sur les performances ou le SEO | Code résiduel >20KB, 10+ broken links, alt text manquant sur 50+ images |
+| `minor` | Impact faible, amélioration recommandée | Headers sécurité manquants, pixel dupliqué, description produit courte |
+| `info` | Information, pas un problème | AI crawler détecté, app mise à jour (pas de régression) |
+
+---
+
+## CELERY TASKS
+
+```python
+# tasks/scan_tasks.py
+
+@celery.task(bind=True, max_retries=3, default_retry_delay=60)
+def run_scan(self, scan_id: str, store_id: str, modules: list[str]):
+    """Task Celery principale. Appelée par le service scan."""
+    try:
+        # Marquer running
+        update_scan_status(scan_id, "running", started_at=datetime.now(UTC))
+
+        # Construire et exécuter le graph
+        orchestrator = ScanOrchestrator(
+            memory=StoreMemory(),
+            shopify=get_shopify_client_for_store(store_id),
+            supabase=get_supabase_service(),
+        )
+        graph = orchestrator.build_graph()
+        result = graph.invoke(AgentState(
+            store_id=store_id,
+            merchant_id=get_merchant_id(store_id),
+            scan_id=scan_id,
+            modules=modules,
+            trigger="celery",
+        ))
+
+        # Marquer completed
+        update_scan_status(
+            scan_id, "completed",
+            score=result.score,
+            mobile_score=result.mobile_score,
+            desktop_score=result.desktop_score,
+            issues_count=len(result.issues),
+            critical_count=sum(1 for i in result.issues if i.severity == "critical"),
+            partial_scan=bool(result.errors),
+            completed_at=datetime.now(UTC),
+        )
+
+    except ShopifyError as exc:
+        if exc.code == ErrorCode.SHOPIFY_RATE_LIMIT:
+            logger.warning("scan_retry_rate_limit", scan_id=scan_id)
+            self.retry(countdown=120)
+        else:
+            mark_scan_failed(scan_id, str(exc), exc.code)
+            raise
+
+    except Exception as exc:
+        logger.error("scan_failed", scan_id=scan_id, error=str(exc))
+        mark_scan_failed(scan_id, str(exc), ErrorCode.SCAN_FAILED)
+        raise
+
+
+@celery.task
+def run_scheduled_scans(plan: str):
+    """Celery beat : déclenche les scans planifiés pour un plan donné."""
+    stores = get_stores_by_plan(plan)
+    for store in stores:
+        modules = get_default_modules_for_plan(plan)
+        scan_id = create_scan_record(store.id, store.merchant_id, modules, trigger="cron")
+        run_scan.delay(scan_id, store.id, modules)
+        logger.info("scheduled_scan_dispatched", store_id=store.id, plan=plan)
+```
+
+---
+
+## RÉSULTATS PARTIELS
+
+Si un ou plusieurs scanners échouent, le scan NE FAIL PAS. Il continue et retourne un résultat partiel.
+
+```python
+# Dans save_results
+partial_scan = bool(state.errors)
+
+# Le score est calculé uniquement sur les scanners qui ont réussi
+# Les scanners manquants sont exclus du calcul (pas de pénalité)
+# Le frontend affiche un warning : "Some checks could not be completed"
+```
+
+La colonne `partial_scan` (BOOLEAN) dans la table `scans` + `state.errors` (list) permettent au frontend d'afficher les scanners manquants.
+
+---
+
+## TIMEOUTS
+
+| Groupe | Timeout par scanner | Timeout total estimé | Justification |
+|--------|-------------------|---------------------|---------------|
+| Shopify API | 120s | ~120s (parallèle) | API Shopify parfois lente sur les gros catalogues |
+| External | 60s | ~60s (parallèle) | HTTP HEAD + DNS lookups |
+| Browser | 90s | ~270s (séquentiel, 3 scanners) | Playwright render + navigation |
+| **Total max** | | **~450s (~7.5 min)** | Worst case avec browser automation |
+| **Total sans browser** | | **~180s (~3 min)** | Free/Starter plan |
+
+Le Celery task a un hard timeout de 10 min (`task_time_limit=600`).
 
 ---
 
 ## INTERDICTIONS
 
-- ❌ Logique métier dans l'orchestrateur → ✅ Logique dans les scanners et services
-- ❌ Appeler Claude API dans un scanner → ✅ Claude API dans le node `analyze` uniquement
-- ❌ Scanner qui raise et bloque tout → ✅ Try/except dans `run_scanners`, continuer
-- ❌ Scanner qui accède à la DB directement → ✅ Scanner reçoit `ShopifyClient`, retourne `ScannerResult`
-- ❌ Notification sans vérifier la limite hebdo → ✅ `can_notify()` check avant envoi
-- ❌ Sauvegarder sans Mem0 update → ✅ Toujours mettre à jour la baseline dans `save_results`
+- ❌ Scanner qui bloque les autres (raise non-catchée) → ✅ Try/except dans le runner
+- ❌ Scanner qui appelle Claude API → ✅ Claude dans le node `analyze` uniquement
+- ❌ Scanner qui écrit en DB → ✅ Retourner ScannerResult, le node `save_results` persiste
+- ❌ Scanner qui envoie des notifications → ✅ Node `notify` s'en charge
+- ❌ Scanner sans timeout → ✅ `asyncio.wait_for()` avec timeout par groupe
+- ❌ Nouveau scanner sans l'enregistrer → ✅ Ajouter dans `ScannerRegistry.__init__`
+- ❌ Scanner qui ignore `should_run()` → ✅ Toujours vérifier module + plan
