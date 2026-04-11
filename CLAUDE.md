@@ -599,6 +599,9 @@ chore(deps): bump langchain to 0.3.x
 | Mem0 / mémoire | `.claude/skills/mem0-integration/SKILL.md` |
 | Playwright | `.claude/skills/browser-automation/SKILL.md` |
 | Agentic Commerce | `.claude/skills/agentic-readiness/SKILL.md` |
+| Le monitoring / alerting | `docs/MONITORING.md` |
+| Les textes / copy de l'app | `docs/COPY.md` |
+| Un bug en prod/staging | `.claude/skills/systematic-debugging/SKILL.md` + `.claude/skills/saas-debug-pipeline/SKILL.md` |
 
 ---
 
