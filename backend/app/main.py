@@ -92,13 +92,19 @@ async def validation_error_handler(
         path=request.url.path,
         errors=str(exc.errors()),
     )
+    # Sanitize errors: remove non-serializable ctx values
+    errors = []
+    for err in exc.errors():
+        clean_err = {k: v for k, v in err.items() if k != "ctx"}
+        errors.append(clean_err)
+
     return JSONResponse(
         status_code=422,
         content={
             "error": {
                 "code": ErrorCode.VALIDATION_ERROR.value,
                 "message": "Validation failed",
-                "details": exc.errors(),
+                "details": errors,
             }
         },
     )
@@ -129,6 +135,10 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> JSONRespo
 
 from app.api.routes.health import router as health_router  # noqa: E402
 from app.api.routes.auth import router as auth_router  # noqa: E402
+from app.api.routes.scans import router as scans_router  # noqa: E402
+from app.api.routes.stores import router as stores_router  # noqa: E402
 
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(scans_router)
+app.include_router(stores_router)

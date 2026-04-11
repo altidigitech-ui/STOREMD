@@ -1,0 +1,389 @@
+"""Scan orchestrator — LangGraph state machine for the scan pipeline.
+
+Nodes:
+1. load_memory     — Load Mem0 context (graceful degradation)
+2. run_scanners    — Execute scanners by group (parallel/sequential)
+3. analyze         — Claude API interprets results (fallback: rules-based)
+4. generate_fixes  — Claude API generates recommendations
+5. save_results    — Persist scan + issues to Supabase
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+import structlog
+
+from app.agent.analyzers import ScannerRegistry
+from app.agent.analyzers.base import BaseScanner, ScannerResult
+from app.models.scan import AgentState, ScanIssue
+
+if TYPE_CHECKING:
+    from supabase import Client as SupabaseClient
+
+    from app.services.shopify import ShopifyClient
+
+logger = structlog.get_logger()
+
+# Score weights from AGENT.md
+SCORE_WEIGHTS = {
+    "mobile_speed": 0.30,
+    "desktop_speed": 0.20,
+    "app_impact": 0.20,
+    "code_quality": 0.15,
+    "seo_basics": 0.15,
+}
+
+
+class ScanOrchestrator:
+    """Orchestrates the scan pipeline through LangGraph-style nodes."""
+
+    def __init__(
+        self,
+        shopify: ShopifyClient,
+        supabase: SupabaseClient,
+        claude_analyze_fn=None,
+        claude_fix_fn=None,
+        memory=None,
+    ) -> None:
+        self.shopify = shopify
+        self.supabase = supabase
+        self.claude_analyze = claude_analyze_fn
+        self.claude_fix = claude_fix_fn
+        self.memory = memory
+        self.registry = ScannerRegistry()
+
+    async def run(self, state: AgentState) -> AgentState:
+        """Execute the full scan pipeline sequentially."""
+        state = await self.node_load_memory(state)
+        state = await self.node_run_scanners(state)
+        state = await self.node_analyze(state)
+        state = await self.node_generate_fixes(state)
+        state = await self.node_save_results(state)
+        return state
+
+    # ------------------------------------------------------------------
+    # Node 1: Load Memory
+    # ------------------------------------------------------------------
+
+    async def node_load_memory(self, state: AgentState) -> AgentState:
+        """Load Mem0 context. Graceful degradation if unavailable."""
+        if not self.memory:
+            logger.info("memory_skipped", reason="no_memory_client")
+            return state
+
+        try:
+            context = await self.memory.recall_for_scan(
+                merchant_id=state.merchant_id,
+                store_id=state.store_id,
+            )
+            state.historical_context = context.get("store", [])
+            state.merchant_preferences = context.get("merchant_preferences", {})
+            state.cross_store_signals = context.get("cross_store", [])
+            logger.info("memory_loaded", store_id=state.store_id)
+        except Exception as exc:
+            logger.warning("memory_load_failed", error=str(exc))
+            # Continue without memory — graceful degradation
+
+        return state
+
+    # ------------------------------------------------------------------
+    # Node 2: Run Scanners
+    # ------------------------------------------------------------------
+
+    async def node_run_scanners(self, state: AgentState) -> AgentState:
+        """Execute scanners by group: parallel API, parallel external, sequential browser."""
+        plan = await self._get_merchant_plan(state.merchant_id)
+        eligible = await self.registry.get_eligible(state.modules, plan)
+
+        # Separate by group
+        group_api = [s for s in eligible if s.group == "shopify_api"]
+        group_ext = [s for s in eligible if s.group == "external"]
+        group_browser = [s for s in eligible if s.group == "browser"]
+
+        # Group 1 — Shopify API (parallel)
+        await self._run_parallel(group_api, state, timeout=120)
+
+        # Group 2 — External (parallel)
+        await self._run_parallel(group_ext, state, timeout=60)
+
+        # Group 3 — Browser (sequential, Pro only)
+        await self._run_sequential(group_browser, state, timeout=90)
+
+        return state
+
+    async def _run_parallel(
+        self, scanners: list[BaseScanner], state: AgentState, timeout: int
+    ) -> None:
+        if not scanners:
+            return
+
+        async def run_one(scanner: BaseScanner) -> tuple[str, ScannerResult | None]:
+            try:
+                result = await asyncio.wait_for(
+                    scanner.scan(state.store_id, self.shopify, state.historical_context),
+                    timeout=timeout,
+                )
+                logger.info(
+                    "scanner_completed",
+                    scanner=scanner.name,
+                    issues=len(result.issues),
+                )
+                return scanner.name, result
+            except asyncio.TimeoutError:
+                logger.warning("scanner_timeout", scanner=scanner.name, timeout=timeout)
+                state.errors.append(f"Scanner {scanner.name} timed out after {timeout}s")
+                return scanner.name, None
+            except Exception as exc:
+                logger.warning("scanner_failed", scanner=scanner.name, error=str(exc))
+                state.errors.append(f"Scanner {scanner.name}: {exc}")
+                return scanner.name, None
+
+        results = await asyncio.gather(*[run_one(s) for s in scanners])
+        for name, result in results:
+            if result is not None:
+                state.scanner_results[name] = result
+
+    async def _run_sequential(
+        self, scanners: list[BaseScanner], state: AgentState, timeout: int
+    ) -> None:
+        for scanner in scanners:
+            try:
+                result = await asyncio.wait_for(
+                    scanner.scan(state.store_id, self.shopify, state.historical_context),
+                    timeout=timeout,
+                )
+                state.scanner_results[scanner.name] = result
+                logger.info("scanner_completed", scanner=scanner.name)
+            except asyncio.TimeoutError:
+                logger.warning("scanner_timeout", scanner=scanner.name, timeout=timeout)
+                state.errors.append(f"Scanner {scanner.name} timed out after {timeout}s")
+            except Exception as exc:
+                logger.warning("scanner_failed", scanner=scanner.name, error=str(exc))
+                state.errors.append(f"Scanner {scanner.name}: {exc}")
+
+    # ------------------------------------------------------------------
+    # Node 3: Analyze
+    # ------------------------------------------------------------------
+
+    async def node_analyze(self, state: AgentState) -> AgentState:
+        """Interpret scanner results. Use Claude API with rules-based fallback."""
+        if self.claude_analyze:
+            try:
+                analysis = await self._claude_analyze(state)
+                state.score = analysis.get("score", 50)
+                state.mobile_score = analysis.get("mobile_score", 50)
+                state.desktop_score = analysis.get("desktop_score", 50)
+
+                # Merge Claude-generated issues with scanner issues
+                for issue_data in analysis.get("top_issues", []):
+                    state.issues.append(ScanIssue(
+                        module=issue_data.get("module", "health"),
+                        scanner=issue_data.get("scanner", "claude_analysis"),
+                        severity=issue_data.get("severity", "minor"),
+                        title=issue_data.get("title", ""),
+                        description=issue_data.get("recommendation", ""),
+                        impact=issue_data.get("impact"),
+                        impact_value=issue_data.get("impact_value"),
+                        impact_unit=issue_data.get("impact_unit"),
+                        fix_type=issue_data.get("fix_type"),
+                    ))
+                return state
+            except Exception as exc:
+                logger.warning("claude_analysis_failed", error=str(exc))
+                # Fall through to rules-based
+
+        # Rules-based fallback
+        self._analyze_rules_based(state)
+        return state
+
+    def _analyze_rules_based(self, state: AgentState) -> None:
+        """Calculate score and collect issues without Claude API."""
+        scores: dict[str, int] = {}
+
+        # Mobile/desktop speed from health_scorer
+        if "health_scorer" in state.scanner_results:
+            m = state.scanner_results["health_scorer"].metrics
+            scores["mobile_speed"] = m.get("mobile_score", 50)
+            scores["desktop_speed"] = m.get("desktop_score", 50)
+
+        # App impact
+        if "app_impact" in state.scanner_results:
+            total_ms = state.scanner_results["app_impact"].metrics.get("total_impact_ms", 0)
+            scores["app_impact"] = max(10, min(100, 100 - total_ms // 30))
+
+        # Code quality
+        code_issues = 0
+        if "residue_detector" in state.scanner_results:
+            code_issues += len(state.scanner_results["residue_detector"].issues)
+        if "ghost_billing" in state.scanner_results:
+            code_issues += len(state.scanner_results["ghost_billing"].issues)
+        if "code_weight" in state.scanner_results:
+            total_kb = state.scanner_results["code_weight"].metrics.get("total_js_kb", 0)
+            if total_kb > 1000:
+                code_issues += 2
+        scores["code_quality"] = max(0, 100 - code_issues * 15)
+
+        # SEO basics (placeholder)
+        scores["seo_basics"] = 50
+
+        # Composite
+        total = sum(
+            scores.get(k, 50) * w for k, w in SCORE_WEIGHTS.items()
+        )
+        state.score = round(total)
+        state.mobile_score = scores.get("mobile_speed", 50)
+        state.desktop_score = scores.get("desktop_speed", 50)
+
+        # Collect issues from all scanners
+        for result in state.scanner_results.values():
+            state.issues.extend(result.issues)
+
+        # Sort by impact_value descending
+        state.issues.sort(key=lambda i: i.impact_value or 0, reverse=True)
+
+    async def _claude_analyze(self, state: AgentState) -> dict:
+        """Call Claude API for analysis."""
+        # Build scanner results summary
+        results_summary = {}
+        for name, result in state.scanner_results.items():
+            results_summary[name] = {
+                "issues_count": len(result.issues),
+                "metrics": result.metrics,
+                "issues": [
+                    {"title": i.title, "severity": i.severity, "impact": i.impact}
+                    for i in result.issues[:10]  # Cap at 10 per scanner
+                ],
+            }
+
+        from app.services.claude import ANALYSIS_PROMPT
+
+        prompt = ANALYSIS_PROMPT.format(
+            store_name=state.metadata.get("store_name", "Unknown"),
+            shop_domain=state.metadata.get("shop_domain", "unknown"),
+            theme_name=state.metadata.get("theme_name", "Unknown"),
+            apps_count=state.metadata.get("apps_count", 0),
+            products_count=state.metadata.get("products_count", 0),
+            shopify_plan=state.metadata.get("shopify_plan", "unknown"),
+            scanner_results_json=json.dumps(results_summary, indent=2),
+            merchant_memory=json.dumps(state.historical_context[:5]),
+            merchant_preferences=json.dumps(state.merchant_preferences),
+            cross_store_signals=json.dumps(state.cross_store_signals[:5]),
+        )
+
+        response_text = await self.claude_analyze(prompt)
+        return json.loads(response_text)
+
+    # ------------------------------------------------------------------
+    # Node 4: Generate Fixes
+    # ------------------------------------------------------------------
+
+    async def node_generate_fixes(self, state: AgentState) -> AgentState:
+        """Generate fix descriptions using Claude API (or skip if unavailable)."""
+        if not self.claude_fix:
+            return state
+
+        # Only generate fixes for issues without fix_description
+        for issue in state.issues[:5]:  # Top 5 issues only
+            if issue.fix_description:
+                continue
+            try:
+                from app.services.claude import FIX_PROMPT
+
+                prompt = FIX_PROMPT.format(
+                    issue_title=issue.title,
+                    scanner=issue.scanner,
+                    severity=issue.severity,
+                    impact=issue.impact or "Unknown",
+                    context_json=json.dumps(issue.context),
+                    preferences=json.dumps(state.merchant_preferences),
+                )
+                response_text = await self.claude_fix(prompt)
+                fix_data = json.loads(response_text)
+                issue.fix_description = fix_data.get("fix_description", "")
+                issue.fix_type = fix_data.get("fix_type", issue.fix_type)
+                issue.auto_fixable = fix_data.get("auto_fixable", False)
+            except Exception as exc:
+                logger.warning(
+                    "fix_generation_failed",
+                    issue=issue.title,
+                    error=str(exc),
+                )
+
+        return state
+
+    # ------------------------------------------------------------------
+    # Node 5: Save Results
+    # ------------------------------------------------------------------
+
+    async def node_save_results(self, state: AgentState) -> AgentState:
+        """Persist scan results and issues to Supabase."""
+        now = datetime.now(UTC).isoformat()
+
+        # Update scan record
+        scan_update = {
+            "status": "completed",
+            "score": state.score,
+            "mobile_score": state.mobile_score,
+            "desktop_score": state.desktop_score,
+            "issues_count": len(state.issues),
+            "critical_count": sum(1 for i in state.issues if i.severity == "critical"),
+            "partial_scan": bool(state.errors),
+            "completed_at": now,
+            "scanner_results": {
+                name: {"issues": len(r.issues), "metrics": r.metrics}
+                for name, r in state.scanner_results.items()
+            },
+        }
+
+        self.supabase.table("scans").update(scan_update).eq(
+            "id", state.scan_id
+        ).execute()
+
+        # Insert scan issues
+        for issue in state.issues:
+            self.supabase.table("scan_issues").insert({
+                "scan_id": state.scan_id,
+                "store_id": state.store_id,
+                "merchant_id": state.merchant_id,
+                "module": issue.module,
+                "scanner": issue.scanner,
+                "severity": issue.severity,
+                "title": issue.title,
+                "description": issue.description,
+                "impact": issue.impact,
+                "impact_value": float(issue.impact_value) if issue.impact_value else None,
+                "impact_unit": issue.impact_unit,
+                "fix_type": issue.fix_type,
+                "fix_description": issue.fix_description,
+                "auto_fixable": issue.auto_fixable,
+                "context": issue.context,
+            }).execute()
+
+        logger.info(
+            "scan_results_saved",
+            scan_id=state.scan_id,
+            score=state.score,
+            issues=len(state.issues),
+            partial=bool(state.errors),
+        )
+
+        return state
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    async def _get_merchant_plan(self, merchant_id: str) -> str:
+        """Get the merchant's current plan."""
+        result = (
+            self.supabase.table("merchants")
+            .select("plan")
+            .eq("id", merchant_id)
+            .single()
+            .execute()
+        )
+        return result.data.get("plan", "free") if result.data else "free"

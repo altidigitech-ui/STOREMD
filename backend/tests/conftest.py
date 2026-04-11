@@ -57,10 +57,15 @@ async def client():
     mock_table = MagicMock()
     mock_table.select.return_value = mock_table
     mock_table.eq.return_value = mock_table
+    mock_table.in_.return_value = mock_table
     mock_table.limit.return_value = mock_table
+    mock_table.order.return_value = mock_table
     mock_table.maybe_single.return_value = mock_table
     mock_table.single.return_value = mock_table
-    mock_table.execute.return_value = MagicMock(data=[{"id": "test"}])
+    mock_table.insert.return_value = mock_table
+    mock_table.update.return_value = mock_table
+    # Default: maybe_single returns a dict (merchant record)
+    mock_table.execute.return_value = MagicMock(data={"id": "test", "plan": "free"})
     mock_supabase.table.return_value = mock_table
 
     with (
