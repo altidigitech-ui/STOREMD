@@ -1,0 +1,4 @@
+-- StoreMD — Schema complet
+-- Source de verite : docs/DATABASE.md
+-- Ce fichier est identique a database/migrations/001_initial.sql
+-- Pour appliquer : utiliser la migration numerotee dans migrations/
