@@ -1,1 +1,41 @@
-dd
+{
+  "$schema": "https://claude.ai/schemas/settings.json",
+  "project": {
+    "name": "StoreMD",
+    "description": "AI agent that monitors Shopify store health"
+  },
+  "permissions": {
+    "allow_file_create": true,
+    "allow_file_edit": true,
+    "allow_file_delete": false,
+    "allow_bash": true,
+    "allow_mcp": true
+  },
+  "hooks": {
+    "pre-commit": {
+      "command": "cd backend && ruff check app/ tasks/ --select=E,F,W,S,B && cd ../frontend && npx eslint src/ --ext .ts,.tsx --max-warnings=0 && npx tsc --noEmit",
+      "description": "Lint + type check before commit"
+    }
+  },
+  "model": {
+    "default": "claude-sonnet-4-20250514",
+    "max_tokens": 16384
+  },
+  "rules": [
+    "ALWAYS read CLAUDE.md and context.md before starting work",
+    "ALWAYS read the relevant docs/ file before implementing a feature",
+    "ALWAYS read the relevant .claude/skills/ SKILL.md before working on that domain",
+    "NEVER use HTTPException directly — use AppError with ErrorCode",
+    "NEVER use print() — use structlog",
+    "NEVER use 'any' type in TypeScript",
+    "NEVER use requests (sync) — use httpx (async)",
+    "NEVER store Shopify tokens in plaintext — always Fernet encrypt",
+    "NEVER create a DB table without RLS policy",
+    "NEVER commit secrets in code",
+    "NEVER commit directly to main — always use feature branches",
+    "ALWAYS include merchant_id in DB inserts for RLS",
+    "ALWAYS end DB migrations with NOTIFY pgrst, 'reload schema'",
+    "ALWAYS write tests for new scanners, endpoints, and services",
+    "ALWAYS verify plan access before executing paid features"
+  ]
+}
