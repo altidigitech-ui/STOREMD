@@ -41,7 +41,7 @@ Repo GitHub : `altidigitech-ui`. Standalone, pas de monorepo, pas de shared kern
 - **pgvector** — stockage Mem0 (si self-hosted)
 
 ### Services externes
-- **Shopify Admin API** — GraphQL (version 2025-04+)
+- **Shopify Admin API** — GraphQL (version 2026-01)
 - **Stripe** — Checkout, Customer Portal, Webhooks (4 plans)
 - **Resend** — emails transactionnels
 - **Sentry** — error tracking
@@ -406,7 +406,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...     # Backend only, JAMAIS exposé au frontend
 # === Shopify ===
 SHOPIFY_API_KEY=xxx
 SHOPIFY_API_SECRET=xxx
-SHOPIFY_API_VERSION=2025-04
+SHOPIFY_API_VERSION=2026-01
 SHOPIFY_SCOPES=read_products,write_products,read_themes,write_themes,read_orders,read_online_store
 
 # === Stripe ===

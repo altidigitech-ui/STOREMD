@@ -61,7 +61,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...test
 REDIS_URL=redis://localhost:6379/1            # DB 1 pour les tests (DB 0 = dev)
 SHOPIFY_API_KEY=test_key
 SHOPIFY_API_SECRET=test_secret
-SHOPIFY_API_VERSION=2025-04
+SHOPIFY_API_VERSION=2026-01
 ANTHROPIC_API_KEY=test_key                    # Mocké, jamais appelé
 FERNET_KEY=test_fernet_key_32_bytes_long_xxx=
 STRIPE_SECRET_KEY=sk_test_xxx

@@ -18,7 +18,7 @@
 ## API VERSION
 
 ```python
-SHOPIFY_API_VERSION = "2025-04"  # depuis config.py / env vars
+SHOPIFY_API_VERSION = "2026-01"  # depuis config.py / env vars
 ```
 
 Toujours utiliser la version configurée, jamais hardcoder dans les queries.

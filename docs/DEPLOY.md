@@ -155,7 +155,7 @@ SUPABASE_DB_URL=postgresql://postgres:xxx@db.ilqjqbwiljrdfsqrenwo.supabase.co:54
 # === Shopify ===
 SHOPIFY_API_KEY=xxx
 SHOPIFY_API_SECRET=xxx
-SHOPIFY_API_VERSION=2025-04
+SHOPIFY_API_VERSION=2026-01
 SHOPIFY_SCOPES=read_products,write_products,read_themes,write_themes,read_orders,read_online_store
 
 # === Stripe ===

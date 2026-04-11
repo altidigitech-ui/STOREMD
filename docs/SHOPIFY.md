@@ -19,7 +19,7 @@ OAuth Flow (10 étapes)
     │
     │ Access token obtenu + chiffré Fernet
     ▼
-API Admin GraphQL (version 2025-04)
+API Admin GraphQL (version 2026-01)
     │
     ├── Données store : thème, apps, produits, pages
     ├── Données commerce : commandes, analytics
@@ -380,7 +380,7 @@ async def apply_alt_text_fix(shopify: ShopifyClient, product_id: str, alt_text: 
 ## GRAPHQL — API VERSION
 
 ```python
-SHOPIFY_API_VERSION = "2025-04"  # Depuis settings / env vars
+SHOPIFY_API_VERSION = "2026-01"  # Depuis settings / env vars
 ```
 
 Shopify déprécie les versions après 12 mois. Surveiller les annonces et mettre à jour annuellement. L'URL de base :
