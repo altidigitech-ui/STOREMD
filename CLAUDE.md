@@ -438,11 +438,18 @@ LANGCHAIN_PROJECT=storemd
 APP_ENV=development|staging|production
 APP_URL=https://storemd.com
 BACKEND_URL=https://api.storemd.com
+
+# === VAPID (Push notifications) ===
+VAPID_PUBLIC_KEY=BNx...                    # Frontend aussi (NEXT_PUBLIC_VAPID_PUBLIC_KEY)
+VAPID_PRIVATE_KEY=xxx                      # Backend only
+VAPID_CONTACT_EMAIL=contact@storemd.com
+
 FERNET_KEY=xxx                         # Chiffrement tokens Shopify
 ```
 
 Chargées via Pydantic `BaseSettings` dans `backend/app/config.py`.
 Frontend : uniquement les vars préfixées `NEXT_PUBLIC_`.
+VAPID_PUBLIC_KEY est aussi exposée au frontend via `NEXT_PUBLIC_VAPID_PUBLIC_KEY`.
 
 ---
 
