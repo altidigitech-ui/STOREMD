@@ -314,3 +314,56 @@ export interface BrokenLinksResponse {
   pages_crawled: number;
   data: BrokenLink[];
 }
+
+// ────────────────── Browser (Pro) ──────────────────
+export interface VisualDeviceDiff {
+  current_url: string | null;
+  previous_url: string | null;
+  diff_pct: number | null;
+  significant_change: boolean;
+}
+
+export interface VisualDiffRegion {
+  area: string;
+  change_pct: number;
+}
+
+export interface VisualDiffResponse {
+  screenshots: {
+    mobile?: VisualDeviceDiff;
+    desktop?: VisualDeviceDiff;
+  };
+  diff_regions: VisualDiffRegion[];
+  scan_id: string | null;
+  scanned_at: string | null;
+}
+
+export interface SimulationStep {
+  name: string;
+  url: string | null;
+  time_ms: number;
+  bottleneck: boolean;
+  cause: string | null;
+}
+
+export interface SimulationResponse {
+  total_time_ms: number;
+  bottleneck_step: string | null;
+  bottleneck_cause: string | null;
+  steps: SimulationStep[];
+  scan_id: string | null;
+  scanned_at: string | null;
+}
+
+// ────────────────── Reports ──────────────────
+export interface WeeklyReportResponse {
+  period: string;
+  score: number;
+  score_delta: number;
+  trend: "up" | "down" | "stable";
+  issues_resolved: number;
+  new_issues: number;
+  top_action: string;
+  report_pdf_url: string | null;
+  generated_at: string;
+}

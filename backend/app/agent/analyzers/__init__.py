@@ -34,9 +34,14 @@ class ScannerRegistry:
         from app.agent.analyzers.accessibility import AccessibilityScanner
         from app.agent.analyzers.bot_traffic import BotTrafficScanner
         from app.agent.analyzers.benchmark import BenchmarkScanner
+        from app.agent.analyzers.trend_analyzer import TrendAnalyzer
+        from app.agent.analyzers.content_theft import ContentTheftScanner
+        from app.agent.browser.visual_store_test import VisualStoreTest
+        from app.agent.browser.real_user_simulation import RealUserSimulation
+        from app.agent.browser.accessibility_live import AccessibilityLiveTest
 
         self._scanners = [
-            # Module: health
+            # Module: health (11)
             HealthScorer(),
             AppImpactScanner(),
             ResidueDetector(),
@@ -46,14 +51,20 @@ class ScannerRegistry:
             PixelHealthScanner(),
             BotTrafficScanner(),
             BenchmarkScanner(),
-            # Module: listings
+            TrendAnalyzer(),
+            ContentTheftScanner(),
+            # Module: listings (1)
             ListingAnalyzer(),
-            # Module: agentic
+            # Module: agentic (2)
             AgenticReadinessScanner(),
             HSCodeValidator(),
-            # Module: compliance
+            # Module: compliance (2)
             BrokenLinksScanner(),
             AccessibilityScanner(),
+            # Module: browser (3, Pro plan, sequential)
+            VisualStoreTest(),
+            RealUserSimulation(),
+            AccessibilityLiveTest(),
         ]
 
     def register(self, scanner: BaseScanner) -> None:
