@@ -143,6 +143,9 @@ from app.api.routes.webhooks_stripe import router as webhooks_stripe_router  # n
 from app.api.routes.feedback import router as feedback_router  # noqa: E402
 from app.api.routes.notifications import router as notifications_router  # noqa: E402
 from app.api.routes.fixes import router as fixes_router  # noqa: E402
+from app.api.routes.listings import router as listings_router  # noqa: E402
+from app.api.routes.agentic import router as agentic_router  # noqa: E402
+from app.api.routes.compliance import router as compliance_router  # noqa: E402
 
 app.include_router(health_router)
 app.include_router(auth_router)
@@ -154,3 +157,6 @@ app.include_router(webhooks_stripe_router)
 app.include_router(feedback_router)
 app.include_router(notifications_router)
 app.include_router(fixes_router)
+app.include_router(listings_router)
+app.include_router(agentic_router)
+app.include_router(compliance_router)

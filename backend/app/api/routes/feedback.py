@@ -6,6 +6,8 @@ import structlog
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from app.agent.learner import OuroborosLearner
+from app.agent.memory import get_store_memory
 from app.dependencies import get_current_merchant, get_supabase_service
 
 logger = structlog.get_logger()
@@ -71,6 +73,27 @@ async def create_feedback(
         accepted=request.accepted,
         category=request.reason_category,
     )
+
+    # Ouroboros — push the feedback into Mem0 so the next scan can adapt.
+    # Failures here must NOT break the API response: feedback is already
+    # persisted in DB, the LEARN layer is best-effort.
+    try:
+        learner = OuroborosLearner(get_store_memory())
+        await learner.process_feedback(
+            merchant_id=merchant["id"],
+            issue_id=request.issue_id,
+            accepted=request.accepted,
+            reason=request.reason,
+            reason_category=request.reason_category,
+            supabase=supabase,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "ouroboros_process_failed",
+            merchant_id=merchant["id"],
+            issue_id=request.issue_id,
+            error=str(exc),
+        )
 
     return {
         "id": feedback["id"],

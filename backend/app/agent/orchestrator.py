@@ -70,7 +70,12 @@ class ScanOrchestrator:
     # ------------------------------------------------------------------
 
     async def node_load_memory(self, state: AgentState) -> AgentState:
-        """Load Mem0 context. Graceful degradation if unavailable."""
+        """Load Mem0 context (merchant + store + cross-store).
+
+        Graceful degradation: a Mem0 outage never breaks a scan. The
+        StoreMemory wrapper itself swallows errors and returns []; we
+        keep the try/except as a final safety net.
+        """
         if not self.memory:
             logger.info("memory_skipped", reason="no_memory_client")
             return state
@@ -79,14 +84,24 @@ class ScanOrchestrator:
             context = await self.memory.recall_for_scan(
                 merchant_id=state.merchant_id,
                 store_id=state.store_id,
+                modules=state.modules,
             )
-            state.historical_context = context.get("store", [])
-            state.merchant_preferences = context.get("merchant_preferences", {})
+            # historical_context = merchant + store memories combined
+            state.historical_context = list(context.get("merchant", [])) + list(
+                context.get("store", [])
+            )
+            # merchant_preferences kept as a list for Claude prompt formatting
+            state.merchant_preferences = context.get("merchant", [])
             state.cross_store_signals = context.get("cross_store", [])
-            logger.info("memory_loaded", store_id=state.store_id)
-        except Exception as exc:
+            logger.info(
+                "memory_loaded",
+                store_id=state.store_id,
+                merchant_memories=len(context.get("merchant", [])),
+                store_memories=len(context.get("store", [])),
+                cross_store_signals=len(context.get("cross_store", [])),
+            )
+        except Exception as exc:  # noqa: BLE001 — degrade gracefully
             logger.warning("memory_load_failed", error=str(exc))
-            # Continue without memory — graceful degradation
 
         return state
 
@@ -371,7 +386,106 @@ class ScanOrchestrator:
             partial=bool(state.errors),
         )
 
+        # Update Mem0 — store baseline + cross-store signals.
+        # Failures here are best-effort: the scan is already saved.
+        previous_score = self._previous_score_from_history(
+            state.historical_context
+        )
+
+        if self.memory:
+            await self._update_memory_after_scan(state)
+
+        # Score-drop notification (after Mem0 write so the new baseline
+        # is in place for the next scan).
+        if (
+            previous_score is not None
+            and state.score is not None
+            and previous_score - state.score >= 5
+        ):
+            await self._notify_score_drop(state, previous_score)
+
         return state
+
+    @staticmethod
+    def _previous_score_from_history(memories: list[dict]) -> int | None:
+        """Find the most recent stored Score: N in the merchant/store memory."""
+        import re as _re
+
+        pattern = _re.compile(r"Score:\s*(\d+)")
+        for mem in memories:
+            text = str(mem.get("memory") or mem.get("content") or "")
+            match = pattern.search(text)
+            if match:
+                return int(match.group(1))
+        return None
+
+    async def _notify_score_drop(
+        self, state: AgentState, previous_score: int
+    ) -> None:
+        try:
+            from app.services.notification import (
+                format_score_drop_notification,
+                send_notification,
+            )
+
+            cause = "recent app or theme change"
+            for issue in state.issues:
+                if issue.severity == "critical":
+                    cause = issue.title
+                    break
+
+            payload = format_score_drop_notification(
+                previous_score=previous_score,
+                current_score=state.score or 0,
+                probable_cause=cause,
+            )
+
+            await send_notification(
+                merchant_id=state.merchant_id,
+                store_id=state.store_id,
+                channel="push",
+                supabase=self.supabase,
+                **payload,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("score_drop_notification_failed", error=str(exc))
+
+    async def _update_memory_after_scan(self, state: AgentState) -> None:
+        """Write the new baseline + cross-store signals to Mem0."""
+        try:
+            critical_count = sum(
+                1 for i in state.issues if i.severity == "critical"
+            )
+            modules = ", ".join(state.modules) if state.modules else "health"
+            now = datetime.now(UTC).isoformat()
+            baseline = (
+                f"Scan {state.scan_id} completed. "
+                f"Score: {state.score} "
+                f"(mobile: {state.mobile_score}, desktop: {state.desktop_score}). "
+                f"Issues: {len(state.issues)} ({critical_count} critical). "
+                f"Modules: {modules}. "
+                f"Date: {now}."
+            )
+            await self.memory.remember_store(state.store_id, baseline)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("memory_remember_store_failed", error=str(exc))
+
+        # Cross-store: signal apps that caused critical issues.
+        for issue in state.issues:
+            if issue.scanner != "app_impact" or issue.severity != "critical":
+                continue
+            try:
+                app_name = issue.context.get("app_title") or issue.context.get(
+                    "app_name", "unknown"
+                )
+                signal = (
+                    f"App '{app_name}' caused critical issue on store "
+                    f"{state.store_id}: {issue.title}. "
+                    f"Impact: {issue.impact or 'unknown'}."
+                )
+                await self.memory.signal_cross_store(signal)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("memory_cross_store_signal_failed", error=str(exc))
 
     # ------------------------------------------------------------------
     # Helpers

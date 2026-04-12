@@ -56,8 +56,8 @@ export default function BrowserPage() {
         </>
       ) : (
         <EmptyState
-          title="Coming in Phase 5"
-          message="Visual diff, user simulation, and accessibility live test views will ship in the next phase."
+          title="No browser test results yet"
+          message="Visual Store Test results will appear here after your next scan. Run a scan with the Browser module enabled to populate this view."
         />
       )}
     </div>

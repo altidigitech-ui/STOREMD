@@ -151,6 +151,20 @@ async def _handle_app_uninstalled(shop: str, payload: dict, supabase) -> None:
         "shopify_access_token_encrypted": None,
     }).eq("id", merchant_id).execute()
 
+    # Mem0 GDPR cleanup — best-effort.
+    try:
+        from app.agent.memory import get_store_memory
+
+        memory = get_store_memory()
+        await memory.forget_merchant(merchant_id)
+        await memory.forget_store(store["id"])
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "mem0_uninstall_cleanup_failed",
+            shop=shop,
+            error=str(exc),
+        )
+
     logger.info("app_uninstalled_cleanup", shop=shop, merchant_id=merchant_id)
 
 

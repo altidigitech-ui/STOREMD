@@ -56,7 +56,7 @@ class AgentState:
 
     # Context from Mem0 (populated in load_memory node)
     historical_context: list[dict] = field(default_factory=list)
-    merchant_preferences: dict = field(default_factory=dict)
+    merchant_preferences: list[dict] = field(default_factory=list)
     cross_store_signals: list[dict] = field(default_factory=list)
 
     # Metadata

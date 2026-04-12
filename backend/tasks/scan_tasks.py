@@ -52,8 +52,9 @@ async def _run_scan_async(
     modules: list[str],
     trigger: str,
 ) -> None:
+    from app.agent.memory import get_store_memory
     from app.agent.orchestrator import ScanOrchestrator
-    from app.core.security import decrypt_token
+    from app.core.security import decrypt_token  # noqa: F401 — used by ShopifyClient
     from app.models.scan import AgentState
     from app.services.shopify import ShopifyClient
 
@@ -97,6 +98,7 @@ async def _run_scan_async(
             supabase=supabase,
             claude_analyze_fn=claude_analyze_fn,
             claude_fix_fn=claude_fix_fn,
+            memory=get_store_memory(),
         )
 
         state = AgentState(
