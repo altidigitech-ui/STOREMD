@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand */
+  --storemd-primary: #2563eb;
+  --storemd-primary-hover: #1d4ed8;
+
+  /* Scores */
+  --score-excellent: #16a34a;
+  --score-good: #65a30d;
+  --score-warning: #ca8a04;
+  --score-poor: #ea580c;
+  --score-critical: #dc2626;
+
+  /* Severity */
+  --severity-critical: #dc2626;
+  --severity-major: #ea580c;
+  --severity-minor: #ca8a04;
+  --severity-info: #2563eb;
+
+  /* Status */
+  --status-success: #16a34a;
+  --status-warning: #ca8a04;
+  --status-error: #dc2626;
+  --status-pending: #6b7280;
+
+  /* Backgrounds */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-card: #ffffff;
+  --bg-muted: #f3f4f6;
+
+  /* Text */
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+
+  /* Borders */
+  --border-default: #e5e7eb;
+  --border-focus: #2563eb;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer components {
+  .storemd-card {
+    @apply rounded-lg border border-gray-200 bg-white p-4 shadow-sm;
+  }
+}
