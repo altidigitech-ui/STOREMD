@@ -38,3 +38,9 @@ out/
 
 # Misc
 *.log
+
+# Vercel
+.vercel/
+
+# Claude Code local state
+.claude/scheduled_tasks.lock
