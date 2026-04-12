@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import jwt
 import redis.asyncio as aioredis
 import structlog
 from fastapi import Depends, Request
@@ -65,59 +64,57 @@ def get_redis() -> aioredis.Redis:
 
 
 async def get_current_merchant(request: Request) -> dict:
-    """Extract and validate the JWT from the Authorization header.
+    """Return the merchant record for the JWT-authenticated request.
 
-    Returns the merchant record from Supabase.
+    Relies on JWTAuthMiddleware to have validated the bearer token and
+    populated request.state.merchant_id. Falls back to validating via
+    Supabase if the middleware was skipped (e.g. direct route testing).
     """
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise AuthError(
-            code=ErrorCode.JWT_INVALID,
-            message="Missing or invalid Authorization header",
-            status_code=401,
-        )
+    merchant_id = getattr(request.state, "merchant_id", None)
 
-    token = auth_header.removeprefix("Bearer ")
-
-    try:
-        payload = jwt.decode(
-            token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-    except jwt.ExpiredSignatureError as exc:
-        raise AuthError(
-            code=ErrorCode.JWT_EXPIRED,
-            message="Token expired",
-            status_code=401,
-        ) from exc
-    except jwt.InvalidTokenError as exc:
-        raise AuthError(
-            code=ErrorCode.JWT_INVALID,
-            message="Invalid token",
-            status_code=401,
-        ) from exc
-
-    merchant_id = payload.get("sub")
     if not merchant_id:
-        raise AuthError(
-            code=ErrorCode.JWT_INVALID,
-            message="Token missing subject",
-            status_code=401,
-        )
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise AuthError(
+                code=ErrorCode.JWT_INVALID,
+                message="Missing or invalid Authorization header",
+                status_code=401,
+            )
+        token = auth_header.removeprefix("Bearer ")
+        try:
+            user_response = get_supabase_anon().auth.get_user(token)
+        except Exception as exc:
+            raise AuthError(
+                code=ErrorCode.JWT_INVALID,
+                message="Invalid or expired token",
+                status_code=401,
+            ) from exc
+        user = getattr(user_response, "user", None)
+        if user is None or not getattr(user, "id", None):
+            raise AuthError(
+                code=ErrorCode.JWT_INVALID,
+                message="Token missing subject",
+                status_code=401,
+            )
+        merchant_id = user.id
 
     supabase = get_supabase_service()
-    result = supabase.table("merchants").select("*").eq("id", merchant_id).maybe_single().execute()
+    result = (
+        supabase.table("merchants")
+        .select("*")
+        .eq("id", merchant_id)
+        .limit(1)
+        .execute()
+    )
 
-    if not result.data:
+    if not result or not result.data:
         raise AuthError(
             code=ErrorCode.MERCHANT_NOT_FOUND,
             message="Merchant profile not found",
             status_code=401,
         )
 
-    return result.data
+    return result.data[0]
 
 
 async def get_current_store(

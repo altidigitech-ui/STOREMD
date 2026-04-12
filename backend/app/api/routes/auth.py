@@ -2,11 +2,9 @@
 
 import re
 import secrets
-from datetime import UTC, datetime, timedelta
-from urllib.parse import urlencode
+from datetime import UTC, datetime
 
 import httpx
-import jwt as pyjwt
 import structlog
 from fastapi import APIRouter, Depends
 
@@ -24,31 +22,6 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 SHOP_DOMAIN_REGEX = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9\-]*\.myshopify\.com$")
-
-SESSION_TTL_SECONDS = 60 * 60 * 24  # 24h
-
-
-def sign_session_token(merchant_id: str, email: str, store_id: str) -> str:
-    """Sign a Supabase-compatible session JWT with SUPABASE_JWT_SECRET.
-
-    The same secret is used by JWTAuthMiddleware to validate incoming
-    Bearer tokens, so sessions issued here authenticate downstream API
-    calls without further exchange. user_metadata.active_store_id is
-    consumed by the frontend's useCurrentStore hook.
-    """
-    now = datetime.now(UTC)
-    payload = {
-        "sub": merchant_id,
-        "email": email,
-        "role": "authenticated",
-        "aud": "authenticated",
-        "iss": f"{settings.SUPABASE_URL}/auth/v1",
-        "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(seconds=SESSION_TTL_SECONDS)).timestamp()),
-        "user_metadata": {"active_store_id": store_id},
-        "app_metadata": {"provider": "shopify"},
-    }
-    return pyjwt.encode(payload, settings.SUPABASE_JWT_SECRET, algorithm="HS256")
 
 
 @router.get("/install")
@@ -235,19 +208,26 @@ async def callback(
         logger.warning("webhook_registration_failed", shop=shop, error=str(exc))
         # Ne pas bloquer l'installation pour un échec webhook
 
-    # Sign a session JWT the frontend can install via supabase.auth.setSession
-    session_token = sign_session_token(merchant["id"], merchant["email"], store_id)
+    # Stash the resolved store_id in app_metadata so the frontend can read it
+    # from session.user.app_metadata.active_store_id after Supabase signs the
+    # session. Also gives PostgREST RLS policies a route to the active store.
+    supabase.auth.admin.update_user_by_id(
+        merchant["id"],
+        {"app_metadata": {"active_store_id": store_id, "provider": "shopify"}},
+    )
 
+    # Ask Supabase to mint a real, Supabase-signed session for this merchant.
+    # We use magiclink + a short-lived redirect target so the frontend lands
+    # straight on /onboarding (or /dashboard) with tokens already in the URL.
     target = "/dashboard" if merchant.get("onboarding_completed") else "/onboarding"
-    query = urlencode(
+    link = supabase.auth.admin.generate_link(
         {
-            "access_token": session_token,
-            "refresh_token": session_token,
-            "expires_in": SESSION_TTL_SECONDS,
-            "token_type": "bearer",
+            "type": "magiclink",
+            "email": merchant["email"],
+            "options": {"redirect_to": f"{settings.APP_URL}{target}"},
         }
     )
-    redirect_url = f"{settings.APP_URL}{target}?{query}"
+    redirect_url = link.properties.action_link
 
     logger.info("oauth_completed", shop=shop, merchant_id=merchant["id"])
     return RedirectResponse(redirect_url)

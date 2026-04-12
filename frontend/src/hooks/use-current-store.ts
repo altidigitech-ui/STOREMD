@@ -28,11 +28,10 @@ export function useCurrentStore(): {
         const { data } = await supabase.auth.getSession();
         if (cancelled) return;
 
-        const meta = (data.session?.user.user_metadata ?? {}) as Record<
-          string,
-          unknown
-        >;
-        const active = meta.active_store_id;
+        const user = data.session?.user;
+        const appMeta = (user?.app_metadata ?? {}) as Record<string, unknown>;
+        const userMeta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+        const active = appMeta.active_store_id ?? userMeta.active_store_id;
         if (typeof active === "string" && active.length > 0) {
           setStoreId(active);
         } else {

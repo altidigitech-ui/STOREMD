@@ -1,17 +1,27 @@
-"""JWT validation middleware for Supabase Auth."""
+"""JWT validation middleware for Supabase Auth.
 
-import jwt
+Tokens are issued and signed by Supabase (via admin.generate_link in
+auth/callback). Since the Supabase JWT secret is not available to this
+service, we validate incoming tokens by calling Supabase's /auth/v1/user
+endpoint via the anon client. Results are cached briefly in-process to
+avoid a round-trip per request.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import time
+
 import structlog
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from app.config import settings
 from app.core.exceptions import ErrorCode
+from app.dependencies import get_supabase_anon
 
 logger = structlog.get_logger()
 
-# Paths that don't require authentication
 PUBLIC_PATHS = frozenset(
     {
         "/api/v1/health",
@@ -24,20 +34,34 @@ PUBLIC_PATHS = frozenset(
     }
 )
 
+# Token → (merchant_id, expires_at_epoch). TTL kept short so revoked
+# sessions don't linger beyond a minute.
+_CACHE_TTL_SECONDS = 60
+_cache: dict[str, tuple[str, float]] = {}
+
+
+def _cached(token: str) -> str | None:
+    entry = _cache.get(token)
+    if not entry:
+        return None
+    merchant_id, expires = entry
+    if expires < time.monotonic():
+        _cache.pop(token, None)
+        return None
+    return merchant_id
+
+
+def _store(token: str, merchant_id: str) -> None:
+    _cache[token] = (merchant_id, time.monotonic() + _CACHE_TTL_SECONDS)
+
 
 class JWTAuthMiddleware(BaseHTTPMiddleware):
-    """Validate JWT on protected routes.
-
-    Public paths (health, auth, webhooks) are excluded.
-    The decoded merchant_id is stored in request.state.merchant_id.
-    """
+    """Validate Supabase-issued access tokens on protected routes."""
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         path = request.url.path
-
-        # Skip auth for public paths
         if path in PUBLIC_PATHS or request.method == "OPTIONS":
             return await call_next(request)
 
@@ -55,33 +79,33 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
 
         token = auth_header.removeprefix("Bearer ")
 
-        try:
-            payload = jwt.decode(
-                token,
-                settings.SUPABASE_JWT_SECRET,
-                algorithms=["HS256"],
-                audience="authenticated",
-            )
-            request.state.merchant_id = payload.get("sub")
-        except jwt.ExpiredSignatureError:
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "error": {
-                        "code": ErrorCode.JWT_EXPIRED.value,
-                        "message": "Token expired",
-                    }
-                },
-            )
-        except jwt.InvalidTokenError:
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "error": {
-                        "code": ErrorCode.JWT_INVALID.value,
-                        "message": "Invalid token",
-                    }
-                },
-            )
+        merchant_id = _cached(token)
+        if merchant_id is None:
+            try:
+                supabase = get_supabase_anon()
+                user_response = await asyncio.to_thread(
+                    supabase.auth.get_user, token
+                )
+                user = getattr(user_response, "user", None)
+                if user is None or not getattr(user, "id", None):
+                    raise ValueError("no user in response")
+                merchant_id = user.id
+                _store(token, merchant_id)
+            except Exception as exc:
+                logger.info(
+                    "jwt_validation_failed",
+                    error=str(exc),
+                    path=path,
+                )
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "error": {
+                            "code": ErrorCode.JWT_INVALID.value,
+                            "message": "Invalid or expired token",
+                        }
+                    },
+                )
 
+        request.state.merchant_id = merchant_id
         return await call_next(request)
