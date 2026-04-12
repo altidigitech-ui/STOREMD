@@ -3,6 +3,7 @@
 import re
 import secrets
 from datetime import UTC, datetime
+from urllib.parse import urlencode
 
 import httpx
 import structlog
@@ -216,18 +217,23 @@ async def callback(
         {"app_metadata": {"active_store_id": store_id, "provider": "shopify"}},
     )
 
-    # Ask Supabase to mint a real, Supabase-signed session for this merchant.
-    # We use magiclink + a short-lived redirect target so the frontend lands
-    # straight on /onboarding (or /dashboard) with tokens already in the URL.
+    # Ask Supabase to mint a magic-link OTP. We intentionally skip Supabase's
+    # /verify redirect flow here because the project's Site URL is inherited
+    # from an older project and cannot be updated via API. Instead we hand the
+    # email + OTP to our own /auth/verify page, which calls verifyOtp in JS
+    # and lands the merchant on the target route on our own domain.
     target = "/dashboard" if merchant.get("onboarding_completed") else "/onboarding"
     link = supabase.auth.admin.generate_link(
         {
             "type": "magiclink",
             "email": merchant["email"],
-            "options": {"redirect_to": f"{settings.APP_URL}{target}"},
         }
     )
-    redirect_url = link.properties.action_link
+    otp = link.properties.email_otp
+    query = urlencode(
+        {"email": merchant["email"], "token": otp, "target": target}
+    )
+    redirect_url = f"{settings.APP_URL}/auth/verify?{query}"
 
     logger.info("oauth_completed", shop=shop, merchant_id=merchant["id"])
     return RedirectResponse(redirect_url)
