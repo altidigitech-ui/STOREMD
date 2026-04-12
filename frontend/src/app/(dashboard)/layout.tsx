@@ -33,7 +33,12 @@ export default function DashboardLayout({
         if (cancelled) return;
 
         if (!data.session) {
-          router.replace("/");
+          // SessionBootstrap may still be installing tokens from the URL
+          // — let onAuthStateChange wake us up rather than redirecting eagerly.
+          const pending =
+            typeof window !== "undefined" &&
+            new URL(window.location.href).searchParams.has("access_token");
+          if (!pending) router.replace("/");
           return;
         }
 
@@ -56,8 +61,17 @@ export default function DashboardLayout({
     }
 
     check();
+
+    const supabase = getSupabaseBrowserClient();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      if (!cancelled) check();
+    });
+
     return () => {
       cancelled = true;
+      subscription.unsubscribe();
     };
   }, [router]);
 

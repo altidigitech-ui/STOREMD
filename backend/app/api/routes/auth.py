@@ -2,9 +2,11 @@
 
 import re
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from urllib.parse import urlencode
 
 import httpx
+import jwt as pyjwt
 import structlog
 from fastapi import APIRouter, Depends
 
@@ -22,6 +24,31 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 SHOP_DOMAIN_REGEX = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9\-]*\.myshopify\.com$")
+
+SESSION_TTL_SECONDS = 60 * 60 * 24  # 24h
+
+
+def sign_session_token(merchant_id: str, email: str, store_id: str) -> str:
+    """Sign a Supabase-compatible session JWT with SUPABASE_JWT_SECRET.
+
+    The same secret is used by JWTAuthMiddleware to validate incoming
+    Bearer tokens, so sessions issued here authenticate downstream API
+    calls without further exchange. user_metadata.active_store_id is
+    consumed by the frontend's useCurrentStore hook.
+    """
+    now = datetime.now(UTC)
+    payload = {
+        "sub": merchant_id,
+        "email": email,
+        "role": "authenticated",
+        "aud": "authenticated",
+        "iss": f"{settings.SUPABASE_URL}/auth/v1",
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(seconds=SESSION_TTL_SECONDS)).timestamp()),
+        "user_metadata": {"active_store_id": store_id},
+        "app_metadata": {"provider": "shopify"},
+    }
+    return pyjwt.encode(payload, settings.SUPABASE_JWT_SECRET, algorithm="HS256")
 
 
 @router.get("/install")
@@ -194,8 +221,10 @@ async def callback(
         supabase.table("stores").update(store_data).eq(
             "id", existing_store["id"]
         ).execute()
+        store_id = existing_store["id"]
     else:
-        supabase.table("stores").insert(store_data).execute()
+        inserted = supabase.table("stores").insert(store_data).execute()
+        store_id = inserted.data[0]["id"]
 
     # Register Shopify webhooks
     try:
@@ -206,11 +235,19 @@ async def callback(
         logger.warning("webhook_registration_failed", shop=shop, error=str(exc))
         # Ne pas bloquer l'installation pour un échec webhook
 
-    # Redirect to dashboard or onboarding
-    if merchant.get("onboarding_completed"):
-        redirect_url = f"{settings.APP_URL}/dashboard"
-    else:
-        redirect_url = f"{settings.APP_URL}/onboarding"
+    # Sign a session JWT the frontend can install via supabase.auth.setSession
+    session_token = sign_session_token(merchant["id"], merchant["email"], store_id)
+
+    target = "/dashboard" if merchant.get("onboarding_completed") else "/onboarding"
+    query = urlencode(
+        {
+            "access_token": session_token,
+            "refresh_token": session_token,
+            "expires_in": SESSION_TTL_SECONDS,
+            "token_type": "bearer",
+        }
+    )
+    redirect_url = f"{settings.APP_URL}{target}?{query}"
 
     logger.info("oauth_completed", shop=shop, merchant_id=merchant["id"])
     return RedirectResponse(redirect_url)
