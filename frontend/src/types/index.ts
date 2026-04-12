@@ -1,0 +1,225 @@
+// Aligned with docs/API.md responses.
+
+// ────────────────── Auth / Plan ──────────────────
+export type Plan = "free" | "starter" | "pro" | "agency";
+
+// ────────────────── Store ──────────────────
+export interface Store {
+  id: string;
+  shopify_shop_domain: string;
+  name: string | null;
+  primary_domain: string | null;
+  theme_name: string | null;
+  products_count: number;
+  apps_count: number;
+  currency: string | null;
+  country: string | null;
+  shopify_plan: string | null;
+  status: "active" | "inactive" | "suspended";
+  created_at: string;
+}
+
+export interface StoreApp {
+  id: string;
+  name: string;
+  handle: string;
+  status: "active" | "inactive";
+  impact_ms: number;
+  scripts_count: number;
+  scripts_size_kb: number;
+  css_size_kb: number;
+  billing_amount: number | null;
+  scopes: string[];
+  developer: string | null;
+  first_detected_at: string;
+}
+
+export interface StoreAppsResponse {
+  data: StoreApp[];
+  total_apps: number;
+  total_impact_ms: number;
+}
+
+// ────────────────── Scans ──────────────────
+export type ScanStatus = "pending" | "running" | "completed" | "failed";
+export type ScanTrigger = "manual" | "cron" | "webhook" | "onboarding";
+export type ScanModule =
+  | "health"
+  | "listings"
+  | "agentic"
+  | "compliance"
+  | "browser";
+
+export interface Scan {
+  id: string;
+  status: ScanStatus;
+  trigger: ScanTrigger;
+  modules: ScanModule[];
+  score: number | null;
+  mobile_score: number | null;
+  desktop_score: number | null;
+  issues_count: number;
+  critical_count: number;
+  partial_scan: boolean;
+  duration_ms: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export type IssueSeverity = "critical" | "major" | "minor" | "info";
+
+export interface ScanIssue {
+  id: string;
+  module: string;
+  scanner: string;
+  severity: IssueSeverity;
+  title: string;
+  description: string | null;
+  impact: string | null;
+  impact_value: number | null;
+  impact_unit: string | null;
+  fix_type: string | null;
+  fix_description: string | null;
+  auto_fixable: boolean;
+  fix_applied: boolean;
+  dismissed: boolean;
+}
+
+export interface ScanDetailResponse {
+  id: string;
+  status: ScanStatus;
+  score: number | null;
+  mobile_score: number | null;
+  desktop_score: number | null;
+  modules: ScanModule[];
+  trigger: ScanTrigger;
+  partial_scan: boolean;
+  duration_ms: number | null;
+  issues: ScanIssue[];
+  errors: string[];
+  started_at: string | null;
+  completed_at: string | null;
+  metadata?: {
+    current_step?: string;
+    progress?: number;
+  };
+}
+
+export interface HealthHistoryPoint {
+  date: string;
+  score: number;
+}
+
+export interface HealthResponse {
+  score: number;
+  mobile_score: number;
+  desktop_score: number;
+  trend: "up" | "down" | "stable";
+  trend_delta: number;
+  last_scan_at: string | null;
+  issues_count: number;
+  critical_count: number;
+  previous_score: number | null;
+  history: HealthHistoryPoint[];
+}
+
+// ────────────────── Pagination ──────────────────
+export interface Pagination {
+  has_next: boolean;
+  next_cursor: string | null;
+  total_count?: number;
+}
+
+export interface Paginated<T> {
+  data: T[];
+  pagination: Pagination;
+}
+
+// ────────────────── Notifications ──────────────────
+export interface Notification {
+  id: string;
+  channel: "push" | "email" | "in_app";
+  title: string;
+  body: string;
+  action_url: string | null;
+  category: string;
+  read: boolean;
+  sent_at: string;
+}
+
+export interface NotificationsResponse {
+  data: Notification[];
+  unread_count: number;
+  pagination: Pagination;
+}
+
+// ────────────────── Fixes ──────────────────
+export type FixStatus =
+  | "pending_approval"
+  | "applied"
+  | "reverted"
+  | "failed";
+
+export interface Fix {
+  fix_id: string;
+  status: FixStatus;
+  fix_type: string;
+  before_state: Record<string, unknown>;
+  after_state: Record<string, unknown>;
+  revertable: boolean;
+  applied_at: string | null;
+  reverted_at?: string | null;
+}
+
+// ────────────────── Billing / Usage ──────────────────
+export type UsageType =
+  | "scan"
+  | "listing_analysis"
+  | "one_click_fix"
+  | "browser_test"
+  | "bulk_operation";
+
+export interface UsageRecord {
+  type: UsageType;
+  count: number;
+  limit: number;
+  remaining: number;
+}
+
+export interface UsageResponse {
+  plan: Plan;
+  period_start: string;
+  period_end: string;
+  usage: UsageRecord[];
+}
+
+export interface CheckoutResponse {
+  checkout_url: string;
+}
+
+export interface PortalResponse {
+  portal_url: string;
+}
+
+// ────────────────── Feedback ──────────────────
+export type FeedbackCategory =
+  | "not_relevant"
+  | "too_risky"
+  | "will_do_later"
+  | "disagree"
+  | "already_fixed"
+  | "other";
+
+export interface FeedbackResponse {
+  id: string;
+  accepted: boolean;
+  reason_category: FeedbackCategory | null;
+  created_at: string;
+}
+
+// ────────────────── Errors ──────────────────
+export interface ApiErrorShape {
+  code: string;
+  message: string;
+}
