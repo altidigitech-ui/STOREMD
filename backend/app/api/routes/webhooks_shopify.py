@@ -209,13 +209,42 @@ async def _handle_product_updated(shop: str, payload: dict, supabase) -> None:
 
 
 async def _handle_theme_updated(shop: str, payload: dict, supabase) -> None:
-    """Theme updated: trigger rescan (Pro+)."""
+    """Theme updated: create a collection backup (feature #7) + trigger rescan (Pro+)."""
     store = _get_store_by_domain(shop, supabase)
     if not store:
         return
 
     merchant = _get_merchant(store["merchant_id"], supabase)
-    if merchant and merchant.get("plan") in ("pro", "agency"):
+    if not merchant:
+        return
+
+    plan = merchant.get("plan")
+
+    # Collection backup (Starter+) — best-effort.
+    if plan in ("starter", "pro", "agency"):
+        try:
+            from app.services.backup import create_collection_backup
+            from app.services.shopify import ShopifyClient
+
+            encrypted = merchant.get("shopify_access_token_encrypted")
+            if encrypted:
+                shopify = ShopifyClient(
+                    store["shopify_shop_domain"], encrypted
+                )
+                await create_collection_backup(
+                    store_id=store["id"],
+                    shopify=shopify,
+                    supabase=supabase,
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "theme_update_backup_failed",
+                shop=shop,
+                error=str(exc),
+            )
+
+    # Trigger a light rescan (Pro+).
+    if plan in ("pro", "agency"):
         logger.info("theme_updated_trigger", shop=shop)
 
 

@@ -1,8 +1,9 @@
-"""Listing Analyzer — Feature #21: score /100 per product listing."""
+"""Listing Analyzer — Features #21, #26 (dead listings), #27 (images)."""
 
 from __future__ import annotations
 
 import re
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import structlog
@@ -14,6 +15,14 @@ if TYPE_CHECKING:
     from app.services.shopify import ShopifyClient
 
 logger = structlog.get_logger()
+
+# Dead-listing thresholds (#26).
+_DEAD_OOS_DAYS = 30  # out of stock for > N days
+_DEAD_DRAFT_DAYS = 60  # kept in DRAFT for > N days
+
+# Image quality thresholds (#27).
+_MIN_IMAGE_DIM_PX = 800  # below → too small for zoom
+_MIN_ALT_TEXT_WORDS = 3
 
 PRODUCTS_QUERY = """
 query FetchProducts($first: Int!, $after: String) {
@@ -27,6 +36,9 @@ query FetchProducts($first: Int!, $after: String) {
                 status
                 productType
                 descriptionHtml
+                createdAt
+                updatedAt
+                totalInventory
                 seo { title description }
                 images(first: 10) {
                     edges {
@@ -35,7 +47,14 @@ query FetchProducts($first: Int!, $after: String) {
                 }
                 variants(first: 10) {
                     edges {
-                        node { id title sku barcode price }
+                        node {
+                            id
+                            title
+                            sku
+                            barcode
+                            price
+                            inventoryQuantity
+                        }
                     }
                 }
             }
@@ -139,12 +158,17 @@ class ListingAnalyzer(BaseScanner):
 
         avg_score = round(sum(scores) / len(scores)) if scores else 0
 
+        # Feature #26 — Dead listing detector.
+        dead_issues, dead_count = self._check_dead_listings(products)
+        issues.extend(dead_issues)
+
         logger.info(
             "listing_scan_complete",
             store_id=store_id,
             products_scanned=len(products),
             avg_score=avg_score,
             below_50=products_below_50,
+            dead_listings=dead_count,
         )
 
         return ScannerResult(
@@ -154,6 +178,7 @@ class ListingAnalyzer(BaseScanner):
                 "products_scanned": len(products),
                 "avg_score": avg_score,
                 "products_below_50": products_below_50,
+                "dead_listings_count": dead_count,
             },
         )
 
@@ -212,17 +237,47 @@ class ListingAnalyzer(BaseScanner):
         if not images:
             return 0
 
+        # Count of images.
         if len(images) < 2:
-            score -= 30
+            score -= 30  # single-image listings look amateur
         elif len(images) < 3:
             score -= 10
 
-        # Alt text check
-        missing_alt = sum(1 for img in images if not img.get("altText"))
-        if missing_alt == len(images):
+        # Alt text coverage + descriptiveness (>= _MIN_ALT_TEXT_WORDS).
+        missing_alt = 0
+        short_alt = 0
+        for img in images:
+            alt = (img.get("altText") or "").strip()
+            if not alt:
+                missing_alt += 1
+            elif len(alt.split()) < _MIN_ALT_TEXT_WORDS:
+                short_alt += 1
+        total = len(images)
+        if missing_alt == total:
             score -= 40
         elif missing_alt > 0:
-            score -= int(20 * missing_alt / len(images))
+            score -= int(20 * missing_alt / total)
+        if short_alt > 0:
+            score -= min(10, short_alt * 3)
+
+        # Resolution — below 800×800 we can't zoom cleanly.
+        small = sum(
+            1
+            for img in images
+            if (img.get("width") or 0) < _MIN_IMAGE_DIM_PX
+            or (img.get("height") or 0) < _MIN_IMAGE_DIM_PX
+        )
+        if small > 0:
+            score -= min(15, small * 5)
+
+        # First image aspect ratio — Shopify recommends square (1:1) for grids.
+        first = images[0]
+        w = first.get("width") or 0
+        h = first.get("height") or 0
+        if w and h:
+            ratio = w / h
+            if ratio < 0.9 or ratio > 1.1:
+                score -= 5
 
         return max(0, min(100, score))
 
@@ -248,3 +303,93 @@ class ListingAnalyzer(BaseScanner):
             score -= 10
 
         return max(0, min(100, score))
+
+    # ------------------------------------------------------------------
+    # Dead listing detector (#26)
+    # ------------------------------------------------------------------
+
+    def _check_dead_listings(
+        self, products: list[dict]
+    ) -> tuple[list[ScanIssue], int]:
+        """Flag out-of-stock / stale-draft products.
+
+        Returns (issues, dead_count).
+        """
+        issues: list[ScanIssue] = []
+        now = datetime.now(UTC)
+        count = 0
+
+        for product in products:
+            reason = self._dead_reason(product, now)
+            if not reason:
+                continue
+            count += 1
+            issues.append(
+                ScanIssue(
+                    module="listings",
+                    scanner=self.name,
+                    severity="minor",
+                    title=f"Dead listing: '{product.get('title', '')}'",
+                    description=reason,
+                    impact="Takes catalogue space without generating revenue",
+                    impact_value=None,
+                    impact_unit=None,
+                    fix_type="manual",
+                    fix_description=(
+                        "Improve, archive, or delete this listing. Dead "
+                        "products dilute your catalogue quality signal."
+                    ),
+                    auto_fixable=False,
+                    context={
+                        "shopify_product_id": product.get("id"),
+                        "title": product.get("title"),
+                        "handle": product.get("handle"),
+                        "status": product.get("status"),
+                        "total_inventory": product.get("totalInventory"),
+                        "updated_at": product.get("updatedAt"),
+                        "reason": reason,
+                    },
+                )
+            )
+
+        return issues, count
+
+    @staticmethod
+    def _dead_reason(product: dict, now: datetime) -> str | None:
+        """Return a short reason string if the product qualifies as 'dead'."""
+        status = (product.get("status") or "").upper()
+
+        # Condition A — stale DRAFT
+        if status == "DRAFT":
+            updated_at = _parse_iso(product.get("updatedAt"))
+            if updated_at and now - updated_at > timedelta(days=_DEAD_DRAFT_DAYS):
+                return (
+                    f"Kept in DRAFT status for more than {_DEAD_DRAFT_DAYS} "
+                    f"days (last update {updated_at.date().isoformat()})."
+                )
+
+        # Condition B — out of stock for a long time
+        total_inventory = product.get("totalInventory")
+        updated_at = _parse_iso(product.get("updatedAt"))
+        if (
+            total_inventory is not None
+            and total_inventory <= 0
+            and updated_at
+            and now - updated_at > timedelta(days=_DEAD_OOS_DAYS)
+        ):
+            return (
+                f"Out of stock and untouched for more than {_DEAD_OOS_DAYS} "
+                "days."
+            )
+
+        return None
+
+
+def _parse_iso(value: str | None) -> datetime | None:
+    """Parse an ISO-8601 timestamp with or without a trailing Z."""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None

@@ -1,9 +1,12 @@
-"""Listings API routes — catalogue scan results, priorities, rewrite, bulk."""
+"""Listings API routes — catalogue scan results, priorities, rewrite, bulk, import."""
 
 from __future__ import annotations
 
+import csv
+import io
+
 import structlog
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Form, Query, UploadFile
 from pydantic import BaseModel, Field
 
 from app.core.exceptions import AuthError, ErrorCode, ListingError
@@ -304,3 +307,182 @@ async def bulk_operation(
         "product_count": len(request.product_ids),
         "operation": request.operation,
     }
+
+
+# ---------------------------------------------------------------------------
+# POST /listings/import — CSV bulk import (Pro+)
+# ---------------------------------------------------------------------------
+
+
+REQUIRED_CSV_COLUMNS = {"title", "description", "handle"}
+MAX_CSV_ROWS = 2_000
+
+
+@router.post("/import")
+async def import_listings_csv(
+    store_id: str,
+    file: UploadFile,
+    mode: str = Form(default="validate_only"),
+    merchant: dict = Depends(get_current_merchant),
+    store: dict = Depends(get_current_store),
+) -> dict:
+    """Upload a CSV of products.
+
+    Modes:
+    - `validate_only` — parse + validate, return errors only
+    - `import` — kick off a Celery task that creates products via
+      Shopify GraphQL `productCreate` mutations
+    """
+    _require_plan(merchant, "pro", "bulk_import")
+
+    if mode not in {"validate_only", "import"}:
+        raise ListingError(
+            code=ErrorCode.INVALID_INPUT,
+            message="mode must be 'validate_only' or 'import'",
+            status_code=422,
+        )
+
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise ListingError(
+            code=ErrorCode.BULK_IMPORT_INVALID_CSV,
+            message="File must be a .csv",
+            status_code=422,
+        )
+
+    raw = await file.read()
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ListingError(
+            code=ErrorCode.BULK_IMPORT_INVALID_CSV,
+            message="CSV must be UTF-8 encoded",
+            status_code=422,
+        ) from exc
+
+    reader = csv.DictReader(io.StringIO(text))
+    header = set(reader.fieldnames or [])
+    missing = REQUIRED_CSV_COLUMNS - header
+    if missing:
+        raise ListingError(
+            code=ErrorCode.BULK_IMPORT_INVALID_CSV,
+            message=(
+                f"Missing required columns: {', '.join(sorted(missing))}"
+            ),
+            status_code=422,
+            context={"missing_columns": sorted(missing)},
+        )
+
+    rows: list[dict] = []
+    errors: list[dict] = []
+    for idx, row in enumerate(reader, start=2):  # header is row 1
+        if len(rows) + len(errors) >= MAX_CSV_ROWS:
+            errors.append(
+                {
+                    "row": idx,
+                    "column": None,
+                    "error": (
+                        f"CSV exceeds max {MAX_CSV_ROWS} rows — split it."
+                    ),
+                }
+            )
+            break
+        row_errors = _validate_csv_row(row, idx)
+        if row_errors:
+            errors.extend(row_errors)
+        else:
+            rows.append(row)
+
+    total = len(rows) + len(errors)
+
+    if mode == "validate_only":
+        return {
+            "status": "validated",
+            "rows_total": total,
+            "rows_valid": len(rows),
+            "rows_errors": len(errors),
+            "errors": errors[:50],  # cap
+        }
+
+    # mode == "import" — persist a bulk job and dispatch.
+    supabase = get_supabase_service()
+    try:
+        result = (
+            supabase.table("bulk_operations")
+            .insert(
+                {
+                    "merchant_id": merchant["id"],
+                    "store_id": store_id,
+                    "operation": "csv_import",
+                    "product_count": len(rows),
+                    "product_ids": [],
+                    "options": {
+                        "filename": file.filename,
+                        "rows": rows,
+                    },
+                    "status": "pending",
+                }
+            )
+            .execute()
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise ListingError(
+            code=ErrorCode.BULK_IMPORT_FAILED,
+            message=f"Could not enqueue import: {exc}",
+            status_code=502,
+        ) from exc
+
+    record = result.data[0]
+    logger.info(
+        "listings_csv_import_enqueued",
+        merchant_id=merchant["id"],
+        store_id=store_id,
+        rows=len(rows),
+        errors=len(errors),
+        bulk_id=record["id"],
+    )
+
+    return {
+        "status": "enqueued",
+        "bulk_operation_id": record["id"],
+        "rows_total": total,
+        "rows_valid": len(rows),
+        "rows_errors": len(errors),
+        "errors": errors[:50],
+    }
+
+
+def _validate_csv_row(row: dict, row_num: int) -> list[dict]:
+    """Validate one CSV row. Returns a list of per-field errors."""
+    errors: list[dict] = []
+    title = (row.get("title") or "").strip()
+    description = (row.get("description") or "").strip()
+    handle = (row.get("handle") or "").strip()
+
+    if not title:
+        errors.append({"row": row_num, "column": "title", "error": "required"})
+    elif len(title) > 255:
+        errors.append(
+            {
+                "row": row_num,
+                "column": "title",
+                "error": "Title exceeds 255 characters",
+            }
+        )
+
+    if not description:
+        errors.append(
+            {"row": row_num, "column": "description", "error": "required"}
+        )
+
+    if not handle:
+        errors.append({"row": row_num, "column": "handle", "error": "required"})
+    elif " " in handle or any(c.isupper() for c in handle):
+        errors.append(
+            {
+                "row": row_num,
+                "column": "handle",
+                "error": "Handle must be lowercase with no spaces",
+            }
+        )
+
+    return errors

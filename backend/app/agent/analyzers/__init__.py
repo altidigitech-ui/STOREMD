@@ -36,12 +36,14 @@ class ScannerRegistry:
         from app.agent.analyzers.benchmark import BenchmarkScanner
         from app.agent.analyzers.trend_analyzer import TrendAnalyzer
         from app.agent.analyzers.content_theft import ContentTheftScanner
+        from app.agent.analyzers.email_health import EmailHealthScanner
+        from app.agent.analyzers.variant_organizer import VariantOrganizer
         from app.agent.browser.visual_store_test import VisualStoreTest
         from app.agent.browser.real_user_simulation import RealUserSimulation
         from app.agent.browser.accessibility_live import AccessibilityLiveTest
 
         self._scanners = [
-            # Module: health (11)
+            # Module: health (12)
             HealthScorer(),
             AppImpactScanner(),
             ResidueDetector(),
@@ -53,8 +55,10 @@ class ScannerRegistry:
             BenchmarkScanner(),
             TrendAnalyzer(),
             ContentTheftScanner(),
-            # Module: listings (1)
+            EmailHealthScanner(),
+            # Module: listings (2)
             ListingAnalyzer(),
+            VariantOrganizer(),
             # Module: agentic (2)
             AgenticReadinessScanner(),
             HSCodeValidator(),
