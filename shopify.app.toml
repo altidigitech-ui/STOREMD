@@ -1,0 +1,10 @@
+name = "StoreMD"
+client_id = "83ed3c24eec56c2030598d26597fbf33"
+application_url = "https://storemd.vercel.app"
+embedded = false
+
+[auth]
+redirect_urls = ["https://storemd-api-production.up.railway.app/api/v1/auth/callback"]
+
+[webhooks]
+api_version = "2026-04"
