@@ -1,11 +1,16 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type {
+  AccessibilityResponse,
+  AgenticScoreResponse,
   ApiErrorShape,
+  BrokenLinksResponse,
   CheckoutResponse,
   FeedbackCategory,
   FeedbackResponse,
   Fix,
   HealthResponse,
+  ListingsPrioritiesResponse,
+  ListingsScanResponse,
   NotificationsResponse,
   Paginated,
   Plan,
@@ -203,6 +208,46 @@ class ApiClient {
         `/api/v1/stores/${storeId}/fixes/${fixId}/revert`,
         { method: "POST" },
       ),
+  };
+
+  // ────────────── Listings ──────────────
+  listings = {
+    scan: (
+      storeId: string,
+      options: {
+        cursor?: string;
+        limit?: number;
+        sort?: string;
+      } = {},
+    ): Promise<ListingsScanResponse> =>
+      this.fetchWithAuth(`/api/v1/stores/${storeId}/listings/scan`, {
+        query: {
+          cursor: options.cursor,
+          limit: options.limit,
+          sort: options.sort,
+        },
+      }),
+    priorities: (storeId: string): Promise<ListingsPrioritiesResponse> =>
+      this.fetchWithAuth(`/api/v1/stores/${storeId}/listings/priorities`),
+  };
+
+  // ────────────── Agentic ──────────────
+  agentic = {
+    score: (storeId: string): Promise<AgenticScoreResponse> =>
+      this.fetchWithAuth(`/api/v1/stores/${storeId}/agentic/score`),
+  };
+
+  // ────────────── Compliance ──────────────
+  compliance = {
+    accessibility: (
+      storeId: string,
+      live: boolean = false,
+    ): Promise<AccessibilityResponse> =>
+      this.fetchWithAuth(`/api/v1/stores/${storeId}/accessibility`, {
+        query: { live },
+      }),
+    brokenLinks: (storeId: string): Promise<BrokenLinksResponse> =>
+      this.fetchWithAuth(`/api/v1/stores/${storeId}/links/broken`),
   };
 }
 

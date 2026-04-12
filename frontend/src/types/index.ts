@@ -223,3 +223,94 @@ export interface ApiErrorShape {
   code: string;
   message: string;
 }
+
+// ────────────────── Listings ──────────────────
+export interface ProductListing {
+  shopify_product_id: string;
+  title: string | null;
+  handle: string | null;
+  score: number | null;
+  title_score: number | null;
+  description_score: number | null;
+  images_score: number | null;
+  seo_score: number | null;
+  revenue_30d: number | null;
+  orders_30d: number | null;
+  priority_rank: number | null;
+  issues: Array<{
+    element: string;
+    score: number;
+    suggestion: string;
+  }>;
+}
+
+export interface ListingsScanResponse {
+  products_scanned: number;
+  avg_score: number;
+  data: ProductListing[];
+  pagination: Pagination;
+}
+
+export interface ListingPriority {
+  shopify_product_id: string;
+  title: string | null;
+  score: number | null;
+  revenue_30d: number | null;
+  potential_uplift_pct: number | null;
+  priority_rank: number | null;
+  top_issue: string | null;
+}
+
+export interface ListingsPrioritiesResponse {
+  data: ListingPriority[];
+}
+
+// ────────────────── Agentic ──────────────────
+export type AgenticCheckStatus = "pass" | "partial" | "fail";
+
+export interface AgenticCheck {
+  name: string;
+  status: AgenticCheckStatus;
+  affected_products: number;
+  pass_rate: number;
+  fix_description: string;
+}
+
+export interface AgenticScoreResponse {
+  score: number;
+  products_scanned: number;
+  checks: AgenticCheck[];
+}
+
+// ────────────────── Compliance ──────────────────
+export interface AccessibilityViolation {
+  rule: string;
+  severity: IssueSeverity;
+  count: number;
+  fix_description: string | null;
+  auto_fixable: boolean;
+}
+
+export interface AccessibilityResponse {
+  score: number;
+  eaa_compliant: boolean;
+  violations_count: number;
+  violations: AccessibilityViolation[];
+  live_test_included: boolean;
+  live_test_available: boolean;
+}
+
+export interface BrokenLink {
+  url: string;
+  source_page: string | null;
+  status_code: number | null;
+  type: "internal" | "external";
+  auto_fixable: boolean;
+  fix_description: string | null;
+}
+
+export interface BrokenLinksResponse {
+  broken_count: number;
+  pages_crawled: number;
+  data: BrokenLink[];
+}

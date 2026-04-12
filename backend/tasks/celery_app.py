@@ -43,6 +43,11 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=3, minute=15),
         "args": ("agency",),
     },
+    # Weekly digest: Sunday 09:00 UTC for Starter+ merchants.
+    "weekly-reports": {
+        "task": "tasks.report_tasks.send_weekly_reports",
+        "schedule": crontab(hour=9, minute=0, day_of_week="sunday"),
+    },
 }
 
 celery_app.autodiscover_tasks(["tasks"])

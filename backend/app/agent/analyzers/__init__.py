@@ -28,6 +28,12 @@ class ScannerRegistry:
         from app.agent.analyzers.security_monitor import SecurityMonitor
         from app.agent.analyzers.listing_analyzer import ListingAnalyzer
         from app.agent.analyzers.pixel_health import PixelHealthScanner
+        from app.agent.analyzers.agentic_readiness import AgenticReadinessScanner
+        from app.agent.analyzers.hs_code_validator import HSCodeValidator
+        from app.agent.analyzers.broken_links import BrokenLinksScanner
+        from app.agent.analyzers.accessibility import AccessibilityScanner
+        from app.agent.analyzers.bot_traffic import BotTrafficScanner
+        from app.agent.analyzers.benchmark import BenchmarkScanner
 
         self._scanners = [
             # Module: health
@@ -38,8 +44,16 @@ class ScannerRegistry:
             CodeWeightScanner(),
             SecurityMonitor(),
             PixelHealthScanner(),
+            BotTrafficScanner(),
+            BenchmarkScanner(),
             # Module: listings
             ListingAnalyzer(),
+            # Module: agentic
+            AgenticReadinessScanner(),
+            HSCodeValidator(),
+            # Module: compliance
+            BrokenLinksScanner(),
+            AccessibilityScanner(),
         ]
 
     def register(self, scanner: BaseScanner) -> None:
