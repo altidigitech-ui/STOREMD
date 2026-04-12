@@ -119,15 +119,18 @@ async def callback(
     encrypted_token = encrypt_token(access_token)
 
     # Upsert merchant
-    existing = (
+    existing_res = (
         supabase.table("merchants")
         .select("*")
         .eq("shopify_shop_domain", shop)
-        .maybe_single()
+        .limit(1)
         .execute()
     )
+    existing_merchant = (
+        existing_res.data[0] if existing_res and existing_res.data else None
+    )
 
-    if existing.data:
+    if existing_merchant:
         # Existing merchant — update token and scopes
         supabase.table("merchants").update(
             {
@@ -135,8 +138,8 @@ async def callback(
                 "shopify_scopes": granted_scopes,
                 "shopify_installed_at": datetime.now(UTC).isoformat(),
             }
-        ).eq("id", existing.data["id"]).execute()
-        merchant = existing.data
+        ).eq("id", existing_merchant["id"]).execute()
+        merchant = existing_merchant
     else:
         # New merchant — create via Supabase Auth
         # The trigger on_auth_user_created will create the merchant profile
@@ -167,13 +170,18 @@ async def callback(
         merchant = merchant_result.data
 
     # Upsert store
-    existing_store = (
+    existing_store_res = (
         supabase.table("stores")
         .select("id")
         .eq("shopify_shop_domain", shop)
         .eq("merchant_id", merchant["id"])
-        .maybe_single()
+        .limit(1)
         .execute()
+    )
+    existing_store = (
+        existing_store_res.data[0]
+        if existing_store_res and existing_store_res.data
+        else None
     )
 
     store_data = {
@@ -182,9 +190,9 @@ async def callback(
         "status": "active",
     }
 
-    if existing_store.data:
+    if existing_store:
         supabase.table("stores").update(store_data).eq(
-            "id", existing_store.data["id"]
+            "id", existing_store["id"]
         ).execute()
     else:
         supabase.table("stores").insert(store_data).execute()
