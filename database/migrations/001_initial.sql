@@ -31,11 +31,11 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION on_auth_user_created()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO merchants (id, email)
+    INSERT INTO public.merchants (id, email)
     VALUES (NEW.id, NEW.email);
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth, pg_temp;
 
 -- ============================================================
 -- 1. MERCHANTS
