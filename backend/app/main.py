@@ -137,8 +137,20 @@ from app.api.routes.health import router as health_router  # noqa: E402
 from app.api.routes.auth import router as auth_router  # noqa: E402
 from app.api.routes.scans import router as scans_router  # noqa: E402
 from app.api.routes.stores import router as stores_router  # noqa: E402
+from app.api.routes.billing import router as billing_router  # noqa: E402
+from app.api.routes.webhooks_shopify import router as webhooks_shopify_router  # noqa: E402
+from app.api.routes.webhooks_stripe import router as webhooks_stripe_router  # noqa: E402
+from app.api.routes.feedback import router as feedback_router  # noqa: E402
+from app.api.routes.notifications import router as notifications_router  # noqa: E402
+from app.api.routes.fixes import router as fixes_router  # noqa: E402
 
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(scans_router)
 app.include_router(stores_router)
+app.include_router(billing_router)
+app.include_router(webhooks_shopify_router)
+app.include_router(webhooks_stripe_router)
+app.include_router(feedback_router)
+app.include_router(notifications_router)
+app.include_router(fixes_router)

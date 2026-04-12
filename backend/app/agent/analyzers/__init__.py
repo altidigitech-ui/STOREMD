@@ -26,14 +26,20 @@ class ScannerRegistry:
         from app.agent.analyzers.ghost_billing import GhostBillingDetector
         from app.agent.analyzers.code_weight import CodeWeightScanner
         from app.agent.analyzers.security_monitor import SecurityMonitor
+        from app.agent.analyzers.listing_analyzer import ListingAnalyzer
+        from app.agent.analyzers.pixel_health import PixelHealthScanner
 
         self._scanners = [
+            # Module: health
             HealthScorer(),
             AppImpactScanner(),
             ResidueDetector(),
             GhostBillingDetector(),
             CodeWeightScanner(),
             SecurityMonitor(),
+            PixelHealthScanner(),
+            # Module: listings
+            ListingAnalyzer(),
         ]
 
     def register(self, scanner: BaseScanner) -> None:
