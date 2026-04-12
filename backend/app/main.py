@@ -49,12 +49,20 @@ app = FastAPI(
 # CORS
 # ---------------------------------------------------------------------------
 
+_STATIC_ORIGINS = {
+    settings.APP_URL,
+    "https://storemd.vercel.app",
+    "https://storemd-altidigitechs-projects.vercel.app",
+    "https://storemd-git-main-altidigitechs-projects.vercel.app",
+    "http://localhost:3000",
+}
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        settings.APP_URL,
-        "http://localhost:3000",
-    ],
+    allow_origins=sorted(_STATIC_ORIGINS),
+    # Also allow any Vercel preview URL for this project
+    # (e.g. storemd-<hash>-altidigitechs-projects.vercel.app).
+    allow_origin_regex=r"^https://storemd-[a-z0-9]+-altidigitechs-projects\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
