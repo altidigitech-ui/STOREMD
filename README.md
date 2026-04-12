@@ -7,7 +7,6 @@ StoreMD scans your store's speed, apps, code, listings, and AI readiness — the
 ---
 
 ## What it does
-
 StoreMD is a Shopify app (embedded, OAuth) with 5 modules and 43 features:
 
 | Module | Features | What it covers |
