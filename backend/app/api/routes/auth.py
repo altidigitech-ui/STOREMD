@@ -14,6 +14,8 @@ from app.config import settings
 from app.core.exceptions import AuthError, ErrorCode
 from app.core.security import encrypt_token
 from app.dependencies import get_redis, get_supabase_service
+from app.services.shopify import ShopifyClient
+from app.services.webhook_registration import register_webhooks
 
 logger = structlog.get_logger()
 
@@ -186,6 +188,15 @@ async def callback(
         ).execute()
     else:
         supabase.table("stores").insert(store_data).execute()
+
+    # Register Shopify webhooks
+    try:
+        shopify_client = ShopifyClient(shop, encrypted_token)
+        await register_webhooks(shopify_client)
+        logger.info("webhooks_registered", shop=shop)
+    except Exception as exc:
+        logger.warning("webhook_registration_failed", shop=shop, error=str(exc))
+        # Ne pas bloquer l'installation pour un échec webhook
 
     # Redirect to dashboard or onboarding
     if merchant.get("onboarding_completed"):
