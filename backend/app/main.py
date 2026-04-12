@@ -146,6 +146,8 @@ from app.api.routes.fixes import router as fixes_router  # noqa: E402
 from app.api.routes.listings import router as listings_router  # noqa: E402
 from app.api.routes.agentic import router as agentic_router  # noqa: E402
 from app.api.routes.compliance import router as compliance_router  # noqa: E402
+from app.api.routes.browser import router as browser_router  # noqa: E402
+from app.api.routes.reports import router as reports_router  # noqa: E402
 
 app.include_router(health_router)
 app.include_router(auth_router)
@@ -160,3 +162,11 @@ app.include_router(fixes_router)
 app.include_router(listings_router)
 app.include_router(agentic_router)
 app.include_router(compliance_router)
+app.include_router(browser_router)
+app.include_router(reports_router)
+
+# Debug router — never mounted in production.
+if not settings.is_production:
+    from app.api.routes.debug import router as debug_router  # noqa: E402
+
+    app.include_router(debug_router)

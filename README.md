@@ -61,36 +61,42 @@ altidigitech-ui/
 ├── context.md                   # Business vision, features, personas, pricing
 ├── README.md                    # This file
 │
-├── backend/
+├── backend/                     # 75 Python modules
 │   ├── app/
-│   │   ├── main.py              # FastAPI app
+│   │   ├── main.py              # FastAPI app — mounts 15 routers (16 in dev/staging)
 │   │   ├── config.py            # Pydantic BaseSettings (env vars)
 │   │   ├── dependencies.py      # DI (Depends)
-│   │   ├── api/routes/          # 15 route modules
+│   │   ├── api/routes/          # auth, scans, stores, billing, fixes, listings,
+│   │   │                        # agentic, compliance, browser, reports, feedback,
+│   │   │                        # notifications, health, webhooks_*, debug (dev only)
 │   │   ├── agent/
-│   │   │   ├── orchestrator.py  # LangGraph state machine
-│   │   │   ├── memory.py        # StoreMemory (Mem0 wrapper)
-│   │   │   ├── learner.py       # Ouroboros feedback loop
-│   │   │   ├── analyzers/       # 18 scanners (BaseScanner)
-│   │   │   ├── actors/          # Notifications, fixes, reports
-│   │   │   └── browser/         # Playwright (visual test, simulation, a11y)
-│   │   ├── services/            # Shopify, Stripe, Supabase, email, push
+│   │   │   ├── orchestrator.py  # 5-node pipeline (load_memory → run → analyze → fix → save)
+│   │   │   ├── memory.py        # StoreMemory (Mem0 wrapper, 4 layers)
+│   │   │   ├── learner.py       # Ouroboros feedback loop + pattern analysis
+│   │   │   ├── analyzers/       # 16 scanners + base.py
+│   │   │   └── browser/         # 3 Playwright scanners + base.py
+│   │   ├── services/            # Shopify, Stripe, Supabase, claude, notification,
+│   │   │                        # report_generator, webhook_registration
 │   │   ├── models/              # Pydantic models + schemas
 │   │   └── core/                # Exceptions, security, logging
-│   ├── tasks/                   # Celery tasks (scans, browser, reports)
-│   ├── tests/                   # pytest (unit + integration)
-│   ├── Dockerfile               # API service
-│   └── Dockerfile.worker        # Celery worker + Playwright
+│   ├── tasks/                   # celery_app, scan_tasks, browser_tasks,
+│   │                            # report_tasks, cross_store_tasks
+│   ├── tests/                   # pytest — 99 unit tests passing
+│   ├── Dockerfile               # API service (Python 3.12-slim + uvicorn)
+│   └── Dockerfile.worker        # Celery worker + Chromium for Playwright
 │
-├── frontend/
+├── frontend/                    # 50 TS/TSX files, 13 static routes built
 │   ├── src/
-│   │   ├── app/                 # Next.js App Router (dashboard, onboarding, pricing)
-│   │   ├── components/          # shadcn/ui + custom (ScoreHero, IssueCard, etc.)
-│   │   ├── hooks/               # useScan, useStore, usePushNotifications
-│   │   ├── lib/                 # API client, Supabase client, utils
-│   │   └── types/               # TypeScript types
+│   │   ├── app/                 # Next.js App Router (dashboard, onboarding,
+│   │   │                        # pricing, reports, browser)
+│   │   ├── components/          # ui/ + dashboard/ + landing/ + onboarding/ +
+│   │   │                        # layout/ + scan/ + shared/
+│   │   ├── hooks/               # use-scan, use-store, use-health,
+│   │   │                        # use-push-notifications, use-install-prompt, etc.
+│   │   ├── lib/                 # API client (typed namespaces), Supabase, utils
+│   │   └── types/               # TypeScript types — full backend schema mirrored
 │   ├── public/                  # PWA manifest, service worker, icons
-│   └── tests/                   # vitest + Playwright E2E
+│   └── tests/                   # vitest — 11 unit tests passing
 │
 ├── database/
 │   ├── schema.sql               # Full schema (generated from docs/DATABASE.md)

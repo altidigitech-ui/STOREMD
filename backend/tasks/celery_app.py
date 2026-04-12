@@ -48,6 +48,11 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.report_tasks.send_weekly_reports",
         "schedule": crontab(hour=9, minute=0, day_of_week="sunday"),
     },
+    # Cross-store intelligence: daily 5 AM UTC.
+    "cross-store-analysis": {
+        "task": "tasks.cross_store_tasks.run_cross_store_analysis",
+        "schedule": crontab(hour=5, minute=0),
+    },
 }
 
 celery_app.autodiscover_tasks(["tasks"])

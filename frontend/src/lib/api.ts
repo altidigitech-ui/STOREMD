@@ -18,9 +18,12 @@ import type {
   Scan,
   ScanDetailResponse,
   ScanModule,
+  SimulationResponse,
   Store,
   StoreAppsResponse,
   UsageResponse,
+  VisualDiffResponse,
+  WeeklyReportResponse,
 } from "@/types";
 
 /**
@@ -248,6 +251,20 @@ class ApiClient {
       }),
     brokenLinks: (storeId: string): Promise<BrokenLinksResponse> =>
       this.fetchWithAuth(`/api/v1/stores/${storeId}/links/broken`),
+  };
+
+  // ────────────── Browser (Pro+) ──────────────
+  browser = {
+    visualDiff: (storeId: string): Promise<VisualDiffResponse> =>
+      this.fetchWithAuth(`/api/v1/stores/${storeId}/visual/diff`),
+    simulation: (storeId: string): Promise<SimulationResponse> =>
+      this.fetchWithAuth(`/api/v1/stores/${storeId}/simulation`),
+  };
+
+  // ────────────── Reports ──────────────
+  reports = {
+    latest: (storeId: string): Promise<WeeklyReportResponse> =>
+      this.fetchWithAuth(`/api/v1/stores/${storeId}/reports/latest`),
   };
 }
 
