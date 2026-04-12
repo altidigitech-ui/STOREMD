@@ -64,11 +64,11 @@ async def receive_shopify_webhook(request: Request) -> JSONResponse:
         .select("id, processed")
         .eq("source", "shopify")
         .eq("external_id", webhook_id)
-        .maybe_single()
+        .limit(1)
         .execute()
     )
 
-    if existing.data:
+    if existing and existing.data:
         logger.info("webhook_duplicate", topic=topic, webhook_id=webhook_id)
         return JSONResponse({"status": "already_processed"})
 
