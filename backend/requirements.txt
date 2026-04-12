@@ -2,6 +2,7 @@
 fastapi>=0.115.0,<1.0.0
 uvicorn[standard]>=0.34.0,<1.0.0
 uvloop>=0.21.0,<1.0.0
+python-multipart>=0.0.20,<1.0.0
 
 # === Async HTTP client ===
 httpx>=0.28.0,<1.0.0
@@ -42,6 +43,7 @@ stripe>=11.0.0,<12.0.0
 
 # === Email ===
 resend>=2.5.0,<3.0.0
+dnspython>=2.7.0,<3.0.0
 
 # === Monitoring ===
 sentry-sdk[fastapi]>=2.19.0,<3.0.0

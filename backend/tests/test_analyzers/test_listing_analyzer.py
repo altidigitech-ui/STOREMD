@@ -136,3 +136,90 @@ async def test_should_run_plan(scanner):
     assert await scanner.should_run(["listings"], "starter") is True
     assert await scanner.should_run(["listings"], "pro") is True
     assert await scanner.should_run(["health"], "pro") is False  # wrong module
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_detects_dead_listings(scanner, mock_shopify):
+    """OOS >30d and stale DRAFT >60d must show up as dead listings."""
+    from datetime import UTC, datetime, timedelta
+
+    now = datetime.now(UTC)
+    oos_old = (now - timedelta(days=45)).isoformat().replace("+00:00", "Z")
+    draft_old = (now - timedelta(days=90)).isoformat().replace("+00:00", "Z")
+    fresh = (now - timedelta(days=3)).isoformat().replace("+00:00", "Z")
+
+    payload = {
+        "products": {
+            "edges": [
+                {
+                    "cursor": "c1",
+                    "node": {
+                        "id": "gid://shopify/Product/1",
+                        "title": "Stale OOS cream",
+                        "handle": "stale-oos",
+                        "status": "ACTIVE",
+                        "productType": "skincare",
+                        "descriptionHtml": "<p>Decent description with enough words to clear the short-copy penalty for this tiny test product.</p>",
+                        "createdAt": oos_old,
+                        "updatedAt": oos_old,
+                        "totalInventory": 0,
+                        "seo": {"title": "Face cream", "description": "Face cream"},
+                        "images": {"edges": []},
+                        "variants": {"edges": [
+                            {"node": {"id": "v1", "title": "Default", "sku": "A", "barcode": None, "price": "10", "inventoryQuantity": 0}},
+                        ]},
+                    },
+                },
+                {
+                    "cursor": "c2",
+                    "node": {
+                        "id": "gid://shopify/Product/2",
+                        "title": "Forgotten draft",
+                        "handle": "forgotten-draft",
+                        "status": "DRAFT",
+                        "productType": "skincare",
+                        "descriptionHtml": "<p>Draft product that's been sitting around for too long.</p>",
+                        "createdAt": draft_old,
+                        "updatedAt": draft_old,
+                        "totalInventory": 5,
+                        "seo": {"title": None, "description": None},
+                        "images": {"edges": []},
+                        "variants": {"edges": [
+                            {"node": {"id": "v2", "title": "Default", "sku": "B", "barcode": None, "price": "20", "inventoryQuantity": 5}},
+                        ]},
+                    },
+                },
+                {
+                    "cursor": "c3",
+                    "node": {
+                        "id": "gid://shopify/Product/3",
+                        "title": "Healthy active product",
+                        "handle": "healthy",
+                        "status": "ACTIVE",
+                        "productType": "skincare",
+                        "descriptionHtml": "<p>Healthy listing updated recently.</p>",
+                        "createdAt": fresh,
+                        "updatedAt": fresh,
+                        "totalInventory": 42,
+                        "seo": {"title": "Healthy product", "description": "Works great"},
+                        "images": {"edges": []},
+                        "variants": {"edges": [
+                            {"node": {"id": "v3", "title": "Default", "sku": "C", "barcode": None, "price": "30", "inventoryQuantity": 42}},
+                        ]},
+                    },
+                },
+            ],
+            "pageInfo": {"hasNextPage": False, "endCursor": "c3"},
+        }
+    }
+
+    mock_shopify.graphql.return_value = payload
+    result = await scanner.scan("store-1", mock_shopify, [])
+
+    assert result.metrics["dead_listings_count"] == 2
+    dead_issues = [i for i in result.issues if i.title.startswith("Dead listing")]
+    assert len(dead_issues) == 2
+    reasons = [i.context["reason"] for i in dead_issues]
+    assert any("Out of stock" in r for r in reasons)
+    assert any("DRAFT" in r for r in reasons)
