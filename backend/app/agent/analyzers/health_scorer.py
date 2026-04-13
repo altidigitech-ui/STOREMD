@@ -70,11 +70,23 @@ class HealthScorer(BaseScanner):
         themes = theme_data["themes"]["edges"]
         theme_name = themes[0]["node"]["name"] if themes else "Unknown"
 
-        # Fetch apps count
-        apps_data = await shopify.graphql(
-            "query { appInstallations(first: 1) { totalCount } }"
-        )
-        apps_count = apps_data["appInstallations"]["totalCount"]
+        # Fetch apps count — AppInstallationConnection.totalCount was
+        # removed in API 2026-01, so we page through edges.
+        apps_count = 0
+        cursor: str | None = None
+        while True:
+            after = f', after: "{cursor}"' if cursor else ""
+            apps_data = await shopify.graphql(
+                "query { appInstallations(first: 250"
+                + after
+                + ") { edges { cursor } pageInfo { hasNextPage } } }"
+            )
+            edges = apps_data["appInstallations"]["edges"]
+            apps_count += len(edges)
+            page_info = apps_data["appInstallations"]["pageInfo"]
+            if not page_info["hasNextPage"] or not edges:
+                break
+            cursor = edges[-1]["cursor"]
 
         # --- Rules-based scoring ---
         # App bloat penalty

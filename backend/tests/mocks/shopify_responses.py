@@ -7,13 +7,13 @@ MOCK_SHOP_DATA = {
         "plan": {"displayName": "Shopify"},
         "currencyCode": "USD",
         "billingAddress": {"countryCodeV2": "US"},
-        "productsCount": {"count": 50},
-    }
+    },
+    "productsCount": {"count": 50},
 }
 
 MOCK_APPS_DATA = {
     "appInstallations": {
-        "totalCount": 5,
+        "pageInfo": {"hasNextPage": False, "endCursor": None},
         "edges": [
             {
                 "node": {
