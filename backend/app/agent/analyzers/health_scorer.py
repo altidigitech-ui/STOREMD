@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from app.agent.analyzers.base import BaseScanner, ScannerResult
+from app.core.exceptions import ShopifyError
 from app.models.scan import ScanIssue
 
 if TYPE_CHECKING:
@@ -70,23 +71,36 @@ class HealthScorer(BaseScanner):
         themes = theme_data["themes"]["edges"]
         theme_name = themes[0]["node"]["name"] if themes else "Unknown"
 
-        # Fetch apps count — AppInstallationConnection.totalCount was
-        # removed in API 2026-01, so we page through edges.
+        # Fetch apps count — appInstallations requires the read_apps
+        # scope which most public apps don't have, so degrade gracefully
+        # if Shopify denies access. AppInstallationConnection.totalCount
+        # was removed in API 2026-01, so we page through edges when allowed.
         apps_count = 0
-        cursor: str | None = None
-        while True:
-            after = f', after: "{cursor}"' if cursor else ""
-            apps_data = await shopify.graphql(
-                "query { appInstallations(first: 250"
-                + after
-                + ") { edges { cursor } pageInfo { hasNextPage } } }"
-            )
-            edges = apps_data["appInstallations"]["edges"]
-            apps_count += len(edges)
-            page_info = apps_data["appInstallations"]["pageInfo"]
-            if not page_info["hasNextPage"] or not edges:
-                break
-            cursor = edges[-1]["cursor"]
+        apps_count_known = True
+        try:
+            cursor: str | None = None
+            while True:
+                after = f', after: "{cursor}"' if cursor else ""
+                apps_data = await shopify.graphql(
+                    "query { appInstallations(first: 250"
+                    + after
+                    + ") { edges { cursor } pageInfo { hasNextPage } } }"
+                )
+                edges = apps_data["appInstallations"]["edges"]
+                apps_count += len(edges)
+                page_info = apps_data["appInstallations"]["pageInfo"]
+                if not page_info["hasNextPage"] or not edges:
+                    break
+                cursor = edges[-1]["cursor"]
+        except ShopifyError as e:
+            if "ACCESS_DENIED" in str(e.context.get("query", "")) or "ACCESS_DENIED" in e.message:
+                apps_count_known = False
+                logger.info(
+                    "appInstallations_access_denied",
+                    note="scope read_apps not granted; skipping app-bloat signal",
+                )
+            else:
+                raise
 
         # --- Rules-based scoring ---
         # App bloat penalty
