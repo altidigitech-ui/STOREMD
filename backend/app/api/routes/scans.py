@@ -256,6 +256,8 @@ async def get_scan_detail(
         trigger=scan.get("trigger", "manual"),
         partial_scan=scan.get("partial_scan", False),
         duration_ms=scan.get("duration_ms"),
+        progress=scan.get("progress") or 0,
+        current_step=scan.get("current_step"),
         issues=issues,
         errors=[],
         started_at=scan.get("started_at"),

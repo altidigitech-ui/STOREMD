@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     SHOPIFY_API_KEY: str
     SHOPIFY_API_SECRET: str
     SHOPIFY_API_VERSION: str = "2026-01"
-    SHOPIFY_SCOPES: str = "read_products,write_products,read_themes,write_themes,read_orders,read_online_store"
+    SHOPIFY_SCOPES: str = "read_products,read_themes,read_orders,read_online_store"
 
     # === Stripe ===
     STRIPE_SECRET_KEY: str = ""

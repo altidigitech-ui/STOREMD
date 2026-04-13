@@ -59,11 +59,27 @@ class ScanOrchestrator:
     async def run(self, state: AgentState) -> AgentState:
         """Execute the full scan pipeline sequentially."""
         state = await self.node_load_memory(state)
+        await self._update_progress(state.scan_id, 10, "Loading store history...")
         state = await self.node_run_scanners(state)
+        await self._update_progress(state.scan_id, 85, "Calculating health score...")
         state = await self.node_analyze(state)
+        await self._update_progress(state.scan_id, 95, "Generating recommendations...")
         state = await self.node_generate_fixes(state)
         state = await self.node_save_results(state)
         return state
+
+    async def _update_progress(
+        self, scan_id: str, progress: int, current_step: str
+    ) -> None:
+        """Best-effort progress write — never break a scan on a transient
+        Supabase glitch."""
+        try:
+            self.supabase.table("scans").update({
+                "progress": progress,
+                "current_step": current_step,
+            }).eq("id", scan_id).execute()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("progress_update_failed", error=str(exc))
 
     # ------------------------------------------------------------------
     # Node 1: Load Memory
@@ -120,12 +136,24 @@ class ScanOrchestrator:
         group_browser = [s for s in eligible if s.group == "browser"]
 
         # Group 1 — Shopify API (parallel)
+        if group_api:
+            await self._update_progress(
+                state.scan_id, 20, "Analyzing theme and apps..."
+            )
         await self._run_parallel(group_api, state, timeout=120)
 
         # Group 2 — External (parallel)
+        if group_ext:
+            await self._update_progress(
+                state.scan_id, 50, "Checking external signals..."
+            )
         await self._run_parallel(group_ext, state, timeout=60)
 
         # Group 3 — Browser (sequential, Pro only)
+        if group_browser:
+            await self._update_progress(
+                state.scan_id, 70, "Running browser tests..."
+            )
         await self._run_sequential(group_browser, state, timeout=90)
 
         return state
@@ -242,8 +270,19 @@ class ScanOrchestrator:
                 code_issues += 2
         scores["code_quality"] = max(0, 100 - code_issues * 15)
 
-        # SEO basics (placeholder)
-        scores["seo_basics"] = 50
+        # SEO basics — derive from listing_analyzer issues. Each SEO-flavored
+        # issue (title/description/alt/image) costs 5 points, floored at 20.
+        if "listing_analyzer" in state.scanner_results:
+            la = state.scanner_results["listing_analyzer"]
+            seo_keywords = ("seo", "title", "description", "alt", "image")
+            seo_issues = sum(
+                1 for i in la.issues
+                if any(k in i.title.lower() for k in seo_keywords)
+            )
+            scores["seo_basics"] = max(20, 100 - seo_issues * 5)
+        else:
+            # No listings data — neutral score, don't penalize.
+            scores["seo_basics"] = 70
 
         # Composite
         total = sum(
@@ -378,6 +417,13 @@ class ScanOrchestrator:
                 "context": issue.context,
             }).execute()
 
+        # Persist installed apps to store_apps for the dashboard.
+        # Best effort — never fail the scan on a write hiccup.
+        try:
+            await self._persist_store_apps(state)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("persist_store_apps_failed", error=str(exc))
+
         logger.info(
             "scan_results_saved",
             scan_id=state.scan_id,
@@ -405,6 +451,64 @@ class ScanOrchestrator:
             await self._notify_score_drop(state, previous_score)
 
         return state
+
+    async def _persist_store_apps(self, state: AgentState) -> None:
+        """Refresh the store_apps table from the latest scan signals.
+
+        Uses health_scorer.metrics["apps"] for identity (always present
+        when the read_apps scope is granted) and optionally enriches each
+        row with app_impact.metrics["app_impacts"] (Starter+) for
+        scripts_count + impact_ms. Falls back to a flat 300ms estimate
+        per app when app_impact didn't run.
+        """
+        hs_result = state.scanner_results.get("health_scorer")
+        if not hs_result:
+            return
+        apps = hs_result.metrics.get("apps") or []
+        if not apps:
+            return
+
+        ai_result = state.scanner_results.get("app_impact")
+        impact_by_handle: dict[str, dict] = {}
+        if ai_result:
+            for item in ai_result.metrics.get("app_impacts") or []:
+                handle = (item.get("app_handle") or "").lower()
+                if handle:
+                    impact_by_handle[handle] = item
+
+        rows = []
+        for app in apps:
+            handle = (app.get("handle") or "").lower()
+            ai = impact_by_handle.get(handle)
+            rows.append({
+                "store_id": state.store_id,
+                "merchant_id": state.merchant_id,
+                "shopify_app_id": app.get("shopify_app_id"),
+                "name": app.get("name") or "Unknown app",
+                "handle": app.get("handle"),
+                "developer": app.get("developer"),
+                "scopes": app.get("scopes") or [],
+                "scripts_count": (ai or {}).get("scripts_count", 0),
+                "impact_ms": (ai or {}).get("estimated_impact_ms", 300),
+                "status": "active",
+            })
+
+        # Replace the existing snapshot for this store. Service-role key
+        # bypasses RLS, so the merchant filter on delete is just defense
+        # in depth.
+        self.supabase.table("store_apps").delete().eq(
+            "store_id", state.store_id
+        ).eq("merchant_id", state.merchant_id).execute()
+
+        if rows:
+            self.supabase.table("store_apps").insert(rows).execute()
+
+        logger.info(
+            "store_apps_persisted",
+            store_id=state.store_id,
+            count=len(rows),
+            with_impact=sum(1 for r in rows if r["scripts_count"] > 0),
+        )
 
     @staticmethod
     def _previous_score_from_history(memories: list[dict]) -> int | None:

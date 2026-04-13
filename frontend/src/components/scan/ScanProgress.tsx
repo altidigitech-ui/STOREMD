@@ -35,8 +35,8 @@ export function ScanProgress({
     return () => clearInterval(t);
   }, []);
 
-  const progress = scan?.metadata?.progress ?? 0;
-  const currentStep = scan?.metadata?.current_step ?? "Starting scan...";
+  const progress = scan?.progress ?? 0;
+  const currentStep = scan?.current_step ?? "Starting scan...";
 
   const steps: { label: string; done: boolean }[] = [
     {

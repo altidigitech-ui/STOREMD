@@ -78,6 +78,8 @@ class ScanDetailResponse(BaseModel):
     trigger: str
     partial_scan: bool = False
     duration_ms: int | None = None
+    progress: int = 0
+    current_step: str | None = None
     issues: list[ScanIssueResponse] = []
     errors: list[str] = []
     started_at: str | None = None

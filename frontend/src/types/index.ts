@@ -96,14 +96,12 @@ export interface ScanDetailResponse {
   trigger: ScanTrigger;
   partial_scan: boolean;
   duration_ms: number | null;
+  progress: number;
+  current_step: string | null;
   issues: ScanIssue[];
   errors: string[];
   started_at: string | null;
   completed_at: string | null;
-  metadata?: {
-    current_step?: string;
-    progress?: number;
-  };
 }
 
 export interface HealthHistoryPoint {

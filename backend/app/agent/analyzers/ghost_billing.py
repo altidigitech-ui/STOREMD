@@ -45,19 +45,53 @@ class GhostBillingDetector(BaseScanner):
         shopify: ShopifyClient,
         memory_context: list[dict],
     ) -> ScannerResult:
-        # 1. Fetch active charges (REST endpoint)
-        charges_data = await shopify.rest_get("recurring_application_charges")
+        # 1. Fetch active charges (REST endpoint).
+        # recurring_application_charges requires a scope our public app
+        # doesn't currently hold. Surface this as an info issue rather
+        # than tanking the whole scan.
+        try:
+            charges_data = await shopify.rest_get("recurring_application_charges")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("ghost_billing_scope_unavailable", error=str(exc))
+            return ScannerResult(
+                scanner_name=self.name,
+                issues=[ScanIssue(
+                    module="health",
+                    scanner=self.name,
+                    severity="info",
+                    title="Ghost billing check requires additional permissions",
+                    description=(
+                        "StoreMD needs the read_all_orders permission to detect "
+                        "apps still billing after uninstall. Re-install StoreMD "
+                        "to grant this permission."
+                    ),
+                    fix_type="manual",
+                    fix_description="Re-install StoreMD from the Shopify App Store",
+                    auto_fixable=False,
+                )],
+                metrics={"skipped": "missing_scope", "error": str(exc)},
+            )
+
         active_charges = [
             c for c in charges_data.get("recurring_application_charges", [])
             if c["status"] == "active"
         ]
 
-        # 2. Fetch installed apps (GraphQL)
-        apps_data = await shopify.graphql(FETCH_APPS_QUERY)
-        installed_app_names = {
-            edge["node"]["app"]["title"]
-            for edge in apps_data["appInstallations"]["edges"]
-        }
+        # 2. Fetch installed apps (GraphQL). Same access constraint as
+        # health_scorer — degrade if Shopify denies the scope.
+        try:
+            apps_data = await shopify.graphql(FETCH_APPS_QUERY)
+            installed_app_names = {
+                edge["node"]["app"]["title"]
+                for edge in apps_data["appInstallations"]["edges"]
+            }
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("ghost_billing_apps_unavailable", error=str(exc))
+            return ScannerResult(
+                scanner_name=self.name,
+                issues=[],
+                metrics={"skipped": "missing_apps_scope", "error": str(exc)},
+            )
 
         # 3. Compare: charges without a matching installed app = ghost
         issues: list[ScanIssue] = []

@@ -71,11 +71,11 @@ class HealthScorer(BaseScanner):
         themes = theme_data["themes"]["edges"]
         theme_name = themes[0]["node"]["name"] if themes else "Unknown"
 
-        # Fetch apps count — appInstallations requires the read_apps
-        # scope which most public apps don't have, so degrade gracefully
-        # if Shopify denies access. AppInstallationConnection.totalCount
-        # was removed in API 2026-01, so we page through edges when allowed.
-        apps_count = 0
+        # Fetch apps + their identity. read_apps scope is restricted by
+        # Shopify, so degrade gracefully if access is denied.
+        # AppInstallationConnection.totalCount was removed in API 2026-01,
+        # so we page through edges when access is granted.
+        apps: list[dict] = []
         apps_count_known = True
         try:
             cursor: str | None = None
@@ -84,10 +84,18 @@ class HealthScorer(BaseScanner):
                 apps_data = await shopify.graphql(
                     "query { appInstallations(first: 250"
                     + after
-                    + ") { edges { cursor } pageInfo { hasNextPage } } }"
+                    + ") { edges { cursor node { app { id title handle developerName } accessScopes { handle } } } pageInfo { hasNextPage } } }"
                 )
                 edges = apps_data["appInstallations"]["edges"]
-                apps_count += len(edges)
+                for edge in edges:
+                    node = edge["node"]
+                    apps.append({
+                        "shopify_app_id": node["app"]["id"],
+                        "name": node["app"]["title"],
+                        "handle": node["app"].get("handle", ""),
+                        "developer": node["app"].get("developerName", ""),
+                        "scopes": [s["handle"] for s in node.get("accessScopes", [])],
+                    })
                 page_info = apps_data["appInstallations"]["pageInfo"]
                 if not page_info["hasNextPage"] or not edges:
                     break
@@ -101,6 +109,8 @@ class HealthScorer(BaseScanner):
                 )
             else:
                 raise
+
+        apps_count = len(apps)
 
         # --- Rules-based scoring ---
         # App bloat penalty
@@ -161,6 +171,8 @@ class HealthScorer(BaseScanner):
                 "mobile_score": mobile_score,
                 "desktop_score": desktop_score,
                 "apps_count": apps_count,
+                "apps_count_known": apps_count_known,
+                "apps": apps,
                 "products_count": products_count,
                 "shopify_plan": shopify_plan,
                 "theme_name": theme_name,

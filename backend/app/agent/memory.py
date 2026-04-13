@@ -31,28 +31,17 @@ logger = structlog.get_logger()
 # Mem0 imports are lazy/optional so the test suite can run without
 # the package installed and so import errors don't crash the worker.
 def _build_client() -> Any:
+    if not settings.MEM0_API_KEY:
+        logger.info(
+            "mem0_disabled",
+            reason="MEM0_API_KEY not configured — memory features disabled",
+        )
+        return None
+
     try:
-        if settings.MEM0_API_KEY:
-            from mem0 import MemoryClient
+        from mem0 import MemoryClient
 
-            return MemoryClient(api_key=settings.MEM0_API_KEY)
-
-        from mem0 import Memory
-
-        # Self-hosted path: Mem0's pgvector backend.
-        # SUPABASE_DB_URL is optional; if missing we use Mem0's defaults
-        # (in-memory) — fine for dev/test, not for prod.
-        config: dict = {}
-        db_url = getattr(settings, "SUPABASE_DB_URL", "") or ""
-        if db_url:
-            config["vector_store"] = {
-                "provider": "pgvector",
-                "config": {
-                    "connection_string": db_url,
-                    "collection_name": "storemd_memories",
-                },
-            }
-        return Memory(config=config) if config else Memory()
+        return MemoryClient(api_key=settings.MEM0_API_KEY)
     except Exception as exc:  # noqa: BLE001 — Mem0 init can fail for many reasons
         logger.warning("mem0_init_failed", error=str(exc))
         return None

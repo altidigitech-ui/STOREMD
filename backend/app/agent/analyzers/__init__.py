@@ -35,7 +35,7 @@ class ScannerRegistry:
         from app.agent.analyzers.bot_traffic import BotTrafficScanner
         from app.agent.analyzers.benchmark import BenchmarkScanner
         from app.agent.analyzers.trend_analyzer import TrendAnalyzer
-        from app.agent.analyzers.content_theft import ContentTheftScanner
+        # V2 — ContentTheftScanner (requires Google Search API)
         from app.agent.analyzers.email_health import EmailHealthScanner
         from app.agent.analyzers.variant_organizer import VariantOrganizer
         from app.agent.browser.visual_store_test import VisualStoreTest
@@ -54,7 +54,6 @@ class ScannerRegistry:
             BotTrafficScanner(),
             BenchmarkScanner(),
             TrendAnalyzer(),
-            ContentTheftScanner(),
             EmailHealthScanner(),
             # Module: listings (2)
             ListingAnalyzer(),
