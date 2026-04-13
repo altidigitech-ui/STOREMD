@@ -285,11 +285,33 @@ class ScanOrchestrator:
             # No listings data — neutral score, don't penalize.
             scores["seo_basics"] = 70
 
-        # Composite
-        total = sum(
-            scores.get(k, 50) * w for k, w in SCORE_WEIGHTS.items()
-        )
-        state.score = round(total)
+        # Composite — only weight categories backed by a scanner that
+        # actually ran on this merchant's plan. Normalize the remaining
+        # weights so we don't silently fill in 50 or 100 for missing
+        # categories and inflate (or deflate) the score.
+        effective_weights: dict[str, float] = {}
+        if "health_scorer" in state.scanner_results:
+            effective_weights["mobile_speed"] = SCORE_WEIGHTS["mobile_speed"]
+            effective_weights["desktop_speed"] = SCORE_WEIGHTS["desktop_speed"]
+        if "app_impact" in state.scanner_results:
+            effective_weights["app_impact"] = SCORE_WEIGHTS["app_impact"]
+        if any(
+            s in state.scanner_results
+            for s in ("residue_detector", "ghost_billing", "code_weight")
+        ):
+            effective_weights["code_quality"] = SCORE_WEIGHTS["code_quality"]
+        if "listing_analyzer" in state.scanner_results:
+            effective_weights["seo_basics"] = SCORE_WEIGHTS["seo_basics"]
+
+        weight_sum = sum(effective_weights.values())
+        if weight_sum > 0:
+            normalized = {k: v / weight_sum for k, v in effective_weights.items()}
+            state.score = round(
+                sum(scores.get(k, 50) * w for k, w in normalized.items())
+            )
+        else:
+            state.score = 50
+
         state.mobile_score = scores.get("mobile_speed", 50)
         state.desktop_score = scores.get("desktop_speed", 50)
 
@@ -425,6 +447,13 @@ class ScanOrchestrator:
         except Exception as exc:  # noqa: BLE001
             logger.warning("persist_store_apps_failed", error=str(exc))
 
+        # Sync shop metadata (name/theme/plan/etc) into stores table so
+        # the dashboard has real values instead of nulls.
+        try:
+            self._update_store_metadata(state, now)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("store_metadata_update_failed", error=str(exc))
+
         logger.info(
             "scan_results_saved",
             scan_id=state.scan_id,
@@ -452,6 +481,34 @@ class ScanOrchestrator:
             await self._notify_score_drop(state, previous_score)
 
         return state
+
+    def _update_store_metadata(self, state: AgentState, now: str) -> None:
+        """Pull what the health_scorer learned about the shop into the
+        stores row so the dashboard has real data instead of nulls."""
+        hs = state.scanner_results.get("health_scorer")
+        if not hs:
+            return
+        m = hs.metrics
+        update: dict = {}
+        if m.get("theme_name") and m["theme_name"] != "Unknown":
+            update["theme_name"] = m["theme_name"]
+        if m.get("products_count") is not None:
+            update["products_count"] = m["products_count"]
+        if m.get("apps_count_known", True) and m.get("apps_count") is not None:
+            update["apps_count"] = m["apps_count"]
+        if m.get("shopify_plan"):
+            update["shopify_plan"] = m["shopify_plan"]
+        if not update:
+            return
+        update["last_scanned_at"] = now
+        self.supabase.table("stores").update(update).eq(
+            "id", state.store_id
+        ).execute()
+        logger.info(
+            "store_metadata_updated",
+            store_id=state.store_id,
+            fields=list(update.keys()),
+        )
 
     async def _persist_store_apps(self, state: AgentState) -> None:
         """Refresh the store_apps table from the latest scan signals.

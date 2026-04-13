@@ -146,9 +146,22 @@ export default function HealthPage() {
           <CardTitle>App Impact on Speed</CardTitle>
           <CardContent>
             {!apps || apps.data.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                No third-party apps detected.
-              </p>
+              apps && !apps.apps_count_known ? (
+                <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+                  <p className="font-medium">
+                    App analysis requires additional permissions
+                  </p>
+                  <p className="mt-1 text-xs text-amber-700">
+                    StoreMD needs the &quot;read_apps&quot; scope to analyze
+                    your installed apps. This will be available in the next
+                    update.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  No third-party apps detected.
+                </p>
+              )
             ) : (
               <ul className="divide-y divide-gray-100">
                 {apps.data

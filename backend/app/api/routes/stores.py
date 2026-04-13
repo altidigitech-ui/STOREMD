@@ -75,8 +75,14 @@ async def get_store_apps(
         for a in apps
     ]
 
+    apps_count_from_scan = store.get("apps_count") or 0
+    # "Known" = we either persisted rows OR the last scan told us a real count.
+    apps_count_known = len(apps) > 0 or apps_count_from_scan > 0
+
     return {
         "data": data,
         "total_apps": len(apps),
         "total_impact_ms": total_impact_ms,
+        "apps_count_known": apps_count_known,
+        "apps_count_from_scan": apps_count_from_scan,
     }

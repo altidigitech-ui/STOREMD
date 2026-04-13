@@ -38,6 +38,8 @@ export interface StoreAppsResponse {
   data: StoreApp[];
   total_apps: number;
   total_impact_ms: number;
+  apps_count_known: boolean;
+  apps_count_from_scan: number;
 }
 
 // ────────────────── Scans ──────────────────

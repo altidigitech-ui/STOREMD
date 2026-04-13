@@ -200,14 +200,36 @@ async def callback(
         inserted = supabase.table("stores").insert(store_data).execute()
         store_id = inserted.data[0]["id"]
 
-    # Register Shopify webhooks
+    # Register Shopify webhooks + fetch basic shop metadata so the
+    # dashboard has real values before the first scan runs.
+    shopify_client = ShopifyClient(shop, encrypted_token)
     try:
-        shopify_client = ShopifyClient(shop, encrypted_token)
         await register_webhooks(shopify_client)
         logger.info("webhooks_registered", shop=shop)
     except Exception as exc:
         logger.warning("webhook_registration_failed", shop=shop, error=str(exc))
         # Ne pas bloquer l'installation pour un échec webhook
+
+    try:
+        shop_info = await shopify_client.graphql(
+            "query { shop { name primaryDomain { url } currencyCode"
+            " billingAddress { countryCodeV2 } plan { displayName } } }"
+        )
+        shop_node = shop_info["shop"]
+        meta_update: dict = {
+            "name": shop_node.get("name"),
+            "primary_domain": (shop_node.get("primaryDomain") or {}).get("url"),
+            "currency": shop_node.get("currencyCode"),
+            "country": (shop_node.get("billingAddress") or {}).get("countryCodeV2"),
+            "shopify_plan": (shop_node.get("plan") or {}).get("displayName", "").lower() or None,
+        }
+        meta_update = {k: v for k, v in meta_update.items() if v}
+        if meta_update:
+            supabase.table("stores").update(meta_update).eq(
+                "id", store_id
+            ).execute()
+    except Exception as exc:  # noqa: BLE001 — non-blocking, scan will fill later
+        logger.warning("store_name_fetch_failed", shop=shop, error=str(exc))
 
     # Stash the resolved store_id in app_metadata so the frontend can read it
     # from session.user.app_metadata.active_store_id after Supabase signs the
