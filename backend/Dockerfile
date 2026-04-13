@@ -11,6 +11,7 @@ RUN playwright install --with-deps chromium
 
 COPY backend/app/ ./app/
 COPY backend/tasks/ ./tasks/
+COPY backend/worker_health.py ./worker_health.py
 COPY backend/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 

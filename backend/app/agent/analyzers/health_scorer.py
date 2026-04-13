@@ -22,8 +22,8 @@ query {
         plan { displayName }
         currencyCode
         billingAddress { countryCodeV2 }
-        productsCount { count }
     }
+    productsCount { count }
 }
 """
 
@@ -62,7 +62,7 @@ class HealthScorer(BaseScanner):
         shop_data = await shopify.graphql(SHOP_QUERY)
         shop = shop_data["shop"]
 
-        products_count = shop["productsCount"]["count"]
+        products_count = shop_data["productsCount"]["count"]
         shopify_plan = shop["plan"]["displayName"].lower()
 
         # Fetch main theme
