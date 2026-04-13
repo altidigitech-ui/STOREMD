@@ -16,5 +16,10 @@ redirect_urls = [
 [webhooks]
 api_version = "2026-04"
 
+[webhooks.privacy_compliance]
+customer_data_request_url = "https://storemd-api-production.up.railway.app/api/v1/webhooks/customers/data_request"
+customer_deletion_url = "https://storemd-api-production.up.railway.app/api/v1/webhooks/customers/redact"
+shop_deletion_url = "https://storemd-api-production.up.railway.app/api/v1/webhooks/shop/redact"
+
 [build]
 dev_store_url = "storemdtest.myshopify.com"

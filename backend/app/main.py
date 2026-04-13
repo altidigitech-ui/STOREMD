@@ -148,6 +148,7 @@ from app.api.routes.stores import router as stores_router  # noqa: E402
 from app.api.routes.billing import router as billing_router  # noqa: E402
 from app.api.routes.webhooks_shopify import router as webhooks_shopify_router  # noqa: E402
 from app.api.routes.webhooks_stripe import router as webhooks_stripe_router  # noqa: E402
+from app.api.routes.webhooks_gdpr import router as webhooks_gdpr_router  # noqa: E402
 from app.api.routes.feedback import router as feedback_router  # noqa: E402
 from app.api.routes.notifications import router as notifications_router  # noqa: E402
 from app.api.routes.fixes import router as fixes_router  # noqa: E402
@@ -164,6 +165,7 @@ app.include_router(stores_router)
 app.include_router(billing_router)
 app.include_router(webhooks_shopify_router)
 app.include_router(webhooks_stripe_router)
+app.include_router(webhooks_gdpr_router)
 app.include_router(feedback_router)
 app.include_router(notifications_router)
 app.include_router(fixes_router)
