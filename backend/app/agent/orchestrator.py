@@ -490,6 +490,14 @@ class ScanOrchestrator:
             return
         m = hs.metrics
         update: dict = {}
+        if m.get("shop_name"):
+            update["name"] = m["shop_name"]
+        if m.get("primary_domain"):
+            update["primary_domain"] = m["primary_domain"]
+        if m.get("currency"):
+            update["currency"] = m["currency"]
+        if m.get("country"):
+            update["country"] = m["country"]
         if m.get("theme_name") and m["theme_name"] != "Unknown":
             update["theme_name"] = m["theme_name"]
         if m.get("products_count") is not None:

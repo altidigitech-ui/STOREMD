@@ -176,5 +176,9 @@ class HealthScorer(BaseScanner):
                 "products_count": products_count,
                 "shopify_plan": shopify_plan,
                 "theme_name": theme_name,
+                "shop_name": shop.get("name"),
+                "primary_domain": (shop.get("primaryDomain") or {}).get("url"),
+                "currency": shop.get("currencyCode"),
+                "country": (shop.get("billingAddress") or {}).get("countryCodeV2"),
             },
         )
