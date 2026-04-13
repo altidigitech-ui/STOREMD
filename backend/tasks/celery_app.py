@@ -9,6 +9,12 @@ celery_app = Celery(
     "storemd",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
+    include=[
+        "tasks.scan_tasks",
+        "tasks.browser_tasks",
+        "tasks.report_tasks",
+        "tasks.cross_store_tasks",
+    ],
 )
 
 celery_app.conf.update(
@@ -55,4 +61,3 @@ celery_app.conf.beat_schedule = {
     },
 }
 
-celery_app.autodiscover_tasks(["tasks"])
