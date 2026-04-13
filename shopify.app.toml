@@ -3,23 +3,26 @@
 client_id = "74e857f2fb3f3944ed97d0c275c8ab65"
 name = "StoreMD"
 application_url = "https://storemd.vercel.app"
-embedded = false
+embedded = true
+
+[build]
+dev_store_url = "storemdtest.myshopify.com"
+
+[webhooks]
+api_version = "2026-01"
+
+  [webhooks.privacy_compliance]
+  customer_deletion_url = "https://storemd-api-production.up.railway.app/api/v1/webhooks/customers/redact"
+  customer_data_request_url = "https://storemd-api-production.up.railway.app/api/v1/webhooks/customers/data_request"
+  shop_deletion_url = "https://storemd-api-production.up.railway.app/api/v1/webhooks/shop/redact"
 
 [access_scopes]
-scopes = "read_products,read_themes,read_orders,read_script_tags"
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_orders,read_products,read_script_tags,read_themes"
+optional_scopes = [ ]
+use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
   "https://storemd-api-production.up.railway.app/api/v1/auth/callback"
 ]
-
-[webhooks]
-api_version = "2026-04"
-
-[webhooks.privacy_compliance]
-customer_data_request_url = "https://storemd-api-production.up.railway.app/api/v1/webhooks/customers/data_request"
-customer_deletion_url = "https://storemd-api-production.up.railway.app/api/v1/webhooks/customers/redact"
-shop_deletion_url = "https://storemd-api-production.up.railway.app/api/v1/webhooks/shop/redact"
-
-[build]
-dev_store_url = "storemdtest.myshopify.com"
