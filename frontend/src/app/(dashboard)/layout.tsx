@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { TabBar } from "@/components/layout/TabBar";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { PageTransition } from "@/components/layout/PageTransition";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import type { Plan } from "@/types";
 
@@ -103,7 +104,9 @@ export default function DashboardLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-6">
+        <PageTransition>{children}</PageTransition>
+      </main>
     </div>
   );
 }

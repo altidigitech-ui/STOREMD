@@ -136,7 +136,7 @@ export default function HealthPage() {
         <Card>
           <CardTitle>Score trend — 7 days</CardTitle>
           <CardContent>
-            <TrendChart data={trendHistory} />
+            <TrendChart data={trendHistory} trend={health.trend} />
           </CardContent>
         </Card>
       )}
