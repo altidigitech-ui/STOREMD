@@ -51,7 +51,7 @@ class ApiClient {
   private readonly baseURL: string;
 
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
+    this.baseURL = "";
   }
 
   private buildUrl(

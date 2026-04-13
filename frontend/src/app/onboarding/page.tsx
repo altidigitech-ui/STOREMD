@@ -60,7 +60,6 @@ export default function OnboardingPage() {
       const created = await api.scans.create(storeId, [
         "health",
         "listings",
-        "agentic",
       ]);
 
       pollTimer.current = setInterval(async () => {
