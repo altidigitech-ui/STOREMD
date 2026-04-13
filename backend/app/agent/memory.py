@@ -31,7 +31,10 @@ logger = structlog.get_logger()
 # Mem0 imports are lazy/optional so the test suite can run without
 # the package installed and so import errors don't crash the worker.
 def _build_client() -> Any:
-    if not settings.MEM0_API_KEY:
+    key = (settings.MEM0_API_KEY or "").strip()
+    # Treat empty, placeholder ("[ta clé ou vide]"), or non-ASCII junk
+    # values as "not configured" so we don't even try to instantiate.
+    if not key or key.startswith("[") or not key.isascii():
         logger.info(
             "mem0_disabled",
             reason="MEM0_API_KEY not configured — memory features disabled",
@@ -41,7 +44,7 @@ def _build_client() -> Any:
     try:
         from mem0 import MemoryClient
 
-        return MemoryClient(api_key=settings.MEM0_API_KEY)
+        return MemoryClient(api_key=key)
     except Exception as exc:  # noqa: BLE001 — Mem0 init can fail for many reasons
         logger.warning("mem0_init_failed", error=str(exc))
         return None

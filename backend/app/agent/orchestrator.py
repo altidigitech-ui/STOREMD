@@ -66,6 +66,7 @@ class ScanOrchestrator:
         await self._update_progress(state.scan_id, 95, "Generating recommendations...")
         state = await self.node_generate_fixes(state)
         state = await self.node_save_results(state)
+        await self._update_progress(state.scan_id, 100, "Done")
         return state
 
     async def _update_progress(
