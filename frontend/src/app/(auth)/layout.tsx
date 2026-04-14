@@ -9,7 +9,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-[#0a0a0f] text-slate-50 antialiased">
       <TrackingProvider />
       {children}
     </div>

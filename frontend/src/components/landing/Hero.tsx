@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, ShieldCheck } from "lucide-react";
-import { AnimatedScore } from "./AnimatedScore";
+import { DashboardMockup } from "./DashboardMockup";
 
 interface HeroProps {
   installHref: string;
@@ -11,77 +11,83 @@ interface HeroProps {
 
 export function Hero({ installHref }: HeroProps) {
   return (
-    <section className="relative overflow-hidden border-b border-gray-100 bg-white">
+    <section className="relative overflow-hidden">
       <div
-        className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.08),transparent_60%)]"
+        className="absolute inset-0 -z-20 animate-gradient-shift bg-mesh"
         aria-hidden
       />
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-6 py-16 sm:py-24 lg:grid-cols-2 lg:py-28">
+      <div
+        className="absolute inset-0 -z-10 bg-dots mask-radial-fade opacity-60"
+        aria-hidden
+      />
+
+      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-6 pb-24 pt-36 sm:pt-40 lg:grid-cols-[1.1fr_1fr] lg:pb-32 lg:pt-44">
         <div className="text-center lg:text-left">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 shadow-sm"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-slate-200 backdrop-blur"
           >
-            <ShieldCheck className="h-3.5 w-3.5 text-blue-600" aria-hidden />
-            Built for Shopify
+            <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
+            Built for Shopify · SOC-style data handling
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.05 }}
-            className="mt-5 text-4xl font-bold leading-tight tracking-tight text-gray-900 sm:text-5xl lg:text-6xl"
+            transition={{ duration: 0.6, delay: 0.08 }}
+            className="mt-6 font-display text-5xl font-bold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl"
           >
-            Your Shopify store is losing money right now.{" "}
-            <span className="text-blue-600">Find out how much.</span>
+            Your store is losing money.
+            <br />
+            <span className="text-gradient-cyan">Find out how much.</span>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-            className="mx-auto mt-5 max-w-xl text-base text-gray-600 sm:text-lg lg:mx-0"
+            transition={{ duration: 0.6, delay: 0.18 }}
+            className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-400 lg:mx-0"
           >
-            StoreMD scans your store in 60 seconds and shows you exactly
-            what&apos;s costing you sales — slow apps, broken tracking, dead
-            products, ghost charges.
+            StoreMD scans your entire Shopify store in 60 seconds. Speed, apps,
+            SEO, security — one dashboard, zero guesswork.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.25 }}
-            className="mt-8 flex flex-col items-center gap-3 lg:items-start"
+            transition={{ duration: 0.6, delay: 0.28 }}
+            className="mt-10 flex flex-col items-center gap-4 lg:items-start"
           >
             <Link
               href={installHref}
-              className="group relative inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-7 py-4 text-base font-semibold text-white shadow-lg shadow-blue-600/30 transition-all hover:bg-blue-700 hover:shadow-blue-600/40 focus:outline-none focus:ring-4 focus:ring-blue-200"
+              className="group relative inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-8 py-4 font-display text-base font-bold text-black shadow-glow transition-all hover:bg-cyan-400 hover:shadow-[0_0_60px_rgba(6,182,212,0.6)] focus:outline-none focus:ring-4 focus:ring-cyan-500/30"
             >
               <span
-                className="absolute inset-0 -z-10 rounded-lg bg-blue-600 animate-ping opacity-20"
+                className="absolute inset-0 -z-10 rounded-xl bg-cyan-400 opacity-60 blur-xl"
                 aria-hidden
               />
               Get your free health score
-              <ArrowRight
-                className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                aria-hidden
-              />
+              <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </Link>
-            <p className="text-xs text-gray-500">
-              Free plan available. No credit card. Installs in 1 click.
+            <p className="flex items-center gap-2 text-sm text-slate-500">
+              <span>Free plan</span>
+              <span className="text-slate-700">·</span>
+              <span>No credit card</span>
+              <span className="text-slate-700">·</span>
+              <span>60-second scan</span>
             </p>
           </motion.div>
         </div>
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-          className="relative mx-auto w-full max-w-md"
+          transition={{ duration: 0.8, delay: 0.3 }}
+          className="animate-float-slow"
         >
-          <AnimatedScore target={78} />
+          <DashboardMockup />
         </motion.div>
       </div>
     </section>

@@ -53,8 +53,86 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Landing uses a dark premium theme. Dashboard stays light. */
+body.landing-dark {
+  background-color: #0a0a0f;
+  color: #f8fafc;
+  color-scheme: dark;
+}
+
 @layer components {
   .storemd-card {
     @apply rounded-lg border border-gray-200 bg-white p-4 shadow-sm;
+  }
+
+  .glass {
+    @apply border border-white/10 bg-white/5 backdrop-blur-xl;
+  }
+
+  .glass-strong {
+    @apply border border-white/10 bg-white/[0.07] backdrop-blur-2xl;
+  }
+
+  .text-gradient-cyan {
+    background: linear-gradient(90deg, #22d3ee 0%, #2dd4bf 60%, #5eead4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+}
+
+@layer utilities {
+  .bg-mesh {
+    background:
+      radial-gradient(
+        ellipse 80% 60% at 15% 10%,
+        rgba(6, 182, 212, 0.18),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 60% 50% at 85% 20%,
+        rgba(20, 184, 166, 0.12),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 90% 70% at 50% 100%,
+        rgba(59, 130, 246, 0.1),
+        transparent 60%
+      ),
+      #0a0a0f;
+    background-size: 200% 200%;
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .bg-dots {
+    background-image: radial-gradient(
+      rgba(255, 255, 255, 0.08) 1px,
+      transparent 1px
+    );
+    background-size: 24px 24px;
+  }
+
+  .mask-radial-fade {
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(
+      ellipse at center,
+      black 30%,
+      transparent 75%
+    );
+  }
+
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .preserve-3d {
+    transform-style: preserve-3d;
   }
 }

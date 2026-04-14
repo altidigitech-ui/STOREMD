@@ -1,12 +1,15 @@
 import { Hero } from "@/components/landing/Hero";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
+import { LogosBar } from "@/components/landing/LogosBar";
 import { PainPoints } from "@/components/landing/PainPoints";
 import { Solution } from "@/components/landing/Solution";
 import { HowItWorks } from "@/components/landing/HowItWorks";
-import { AntiBloat } from "@/components/landing/AntiBloat";
+import { FeaturesGrid } from "@/components/landing/FeaturesGrid";
 import { PricingPreview } from "@/components/landing/PricingPreview";
+import { Testimonials } from "@/components/landing/Testimonials";
 import { FAQ } from "@/components/landing/FAQ";
 import { FooterCTA } from "@/components/landing/FooterCTA";
+import { Footer } from "@/components/landing/Footer";
 
 export const metadata = {
   title:
@@ -21,30 +24,33 @@ export default function LandingPage() {
     : "/api/v1/auth/install";
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      <LandingNavbar />
+    <div className="relative min-h-screen bg-[#0a0a0f] font-sans text-slate-100 antialiased">
+      <LandingNavbar installHref={installHref} />
       <Hero installHref={installHref} />
+      <LogosBar />
       <PainPoints />
       <Solution />
       <HowItWorks />
-      <AntiBloat />
+      <FeaturesGrid />
       <PricingPreview installHref={installHref} />
-      <section id="faq" className="border-t border-gray-100 bg-gray-50">
-        <div className="mx-auto max-w-6xl px-6 py-20">
+      <Testimonials />
+      <section id="faq" className="relative py-24">
+        <div className="mx-auto max-w-7xl px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
-              Frequently asked questions
+            <h2 className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+              Frequently asked <span className="text-gradient-cyan">questions</span>
             </h2>
-            <p className="mt-3 text-base text-gray-600">
+            <p className="mt-4 text-base text-slate-400">
               Everything you need to know before installing.
             </p>
           </div>
-          <div className="mt-10">
+          <div className="mt-12">
             <FAQ />
           </div>
         </div>
       </section>
       <FooterCTA installHref={installHref} />
+      <Footer />
     </div>
   );
 }

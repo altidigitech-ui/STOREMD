@@ -1,97 +1,121 @@
 "use client";
 
 import { motion } from "framer-motion";
+import {
+  AlertTriangle,
+  Bug,
+  Gauge,
+  Lock,
+  Mail,
+  TrendingDown,
+  type LucideIcon,
+} from "lucide-react";
+import { useRef, useState, MouseEvent } from "react";
 
-const PAINS = [
+interface Pain {
+  Icon: LucideIcon;
+  title: string;
+  body: string;
+}
+
+const PAINS: Pain[] = [
   {
-    emoji: "🐌",
-    title: "Your store takes 6+ seconds to load",
-    body: "You've installed 15 apps over the years. Each one added JavaScript. Your customers leave before the page even loads. You're losing thousands in sales every day.",
+    Icon: Gauge,
+    title: "Slow page load",
+    body: "Every second costs you 7% in conversions. Most stores don't know their real speed.",
   },
   {
-    emoji: "💸",
-    title: "You're paying for apps you don't use",
-    body: "That review app you uninstalled 6 months ago? It's still billing you $29/month. And its code is still slowing your store down.",
+    Icon: Bug,
+    title: "Ghost code",
+    body: "Uninstalled apps leave scripts that slow your store down — for months.",
   },
   {
-    emoji: "🤖",
-    title: "AI shoppers can't find your products",
-    body: "ChatGPT, Copilot, and Gemini now buy products directly from Shopify stores. If your listings aren't optimized, you're invisible to 100M+ AI users.",
+    Icon: AlertTriangle,
+    title: "Broken tracking",
+    body: "Your Meta Pixel fires 3 times. GA4 is missing on checkout. You're flying blind.",
   },
   {
-    emoji: "📊",
-    title: "Your tracking pixels are broken",
-    body: "Your Meta Pixel fired 3 times on the same page. Your GA4 is missing on checkout. You're burning ad budget on bad data.",
+    Icon: TrendingDown,
+    title: "Poor listings",
+    body: "Products that Google and ChatGPT can't understand don't sell.",
   },
   {
-    emoji: "📉",
-    title: "You don't know your store's health",
-    body: "Is your store faster or slower than last month? Which app update broke your speed? You have no baseline, no monitoring, no alerts.",
+    Icon: Lock,
+    title: "Security gaps",
+    body: "Missing headers, weak scopes, exposed secrets — your customers' browsers can see them.",
   },
   {
-    emoji: "⚖️",
-    title: "The EU Accessibility Act is here",
-    body: "EU stores must be accessible. Fines up to €250,000. Do you know if your store is compliant? Most Shopify stores aren't.",
+    Icon: Mail,
+    title: "Email in spam",
+    body: "No SPF. No DKIM. Your order confirmations never arrive in inboxes.",
   },
 ];
 
-const container = {
-  hidden: {},
-  show: {
-    transition: { staggerChildren: 0.08 },
-  },
-};
+function PainCard({ pain, index }: { pain: Pain; index: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [transform, setTransform] = useState("");
 
-const item = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-};
+  const onMove = (e: MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setTransform(
+      `perspective(1000px) rotateY(${x * 6}deg) rotateX(${-y * 6}deg)`,
+    );
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.5, delay: index * 0.06 }}
+      onMouseMove={onMove}
+      onMouseLeave={() => setTransform("")}
+      style={{ transform, transition: "transform 0.2s ease-out" }}
+      className="group relative rounded-2xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl transition-colors hover:border-cyan-500/30 hover:bg-white/[0.08]"
+    >
+      <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-400 shadow-glow-sm">
+        <pain.Icon className="h-5 w-5" />
+      </div>
+      <h3 className="mt-5 font-display text-xl font-semibold text-white">
+        {pain.title}
+      </h3>
+      <p className="mt-2 text-sm leading-relaxed text-slate-400">
+        {pain.body}
+      </p>
+    </motion.div>
+  );
+}
 
 export function PainPoints() {
   return (
-    <section className="bg-slate-950 text-white">
-      <div className="mx-auto max-w-6xl px-6 py-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="text-3xl font-bold sm:text-4xl">Sound familiar?</h2>
-          <p className="mt-3 text-base text-gray-400">
-            These are the six silent killers of Shopify stores. You probably
-            have at least three.
+    <section className="relative py-24">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
+          >
+            What&apos;s silently killing your revenue?
+          </motion.h2>
+          <p className="mt-4 text-base text-slate-400">
+            Six problems every Shopify store has. Most merchants discover them
+            too late.
           </p>
         </div>
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.15 }}
-          className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {PAINS.map((pain) => (
-            <motion.div
-              key={pain.title}
-              variants={item}
-              className="group relative rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition-all hover:border-white/20 hover:bg-white/[0.05]"
-            >
-              <div
-                className="absolute inset-x-0 -top-px mx-6 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100"
-                aria-hidden
-              />
-              <span
-                className="text-3xl"
-                aria-hidden
-                role="img"
-              >
-                {pain.emoji}
-              </span>
-              <h3 className="mt-4 text-lg font-semibold text-white">
-                {pain.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-gray-400">
-                {pain.body}
-              </p>
-            </motion.div>
+        <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {PAINS.map((pain, i) => (
+            <PainCard key={pain.title} pain={pain} index={i} />
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

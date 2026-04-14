@@ -2,14 +2,25 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PricingPreviewProps {
   installHref: string;
 }
 
-const TIERS = [
+interface Tier {
+  id: string;
+  name: string;
+  price: string;
+  cadence: string;
+  blurb: string;
+  features: string[];
+  cta: string;
+  popular?: boolean;
+}
+
+const TIERS: Tier[] = [
   {
     id: "free",
     name: "Free",
@@ -76,13 +87,24 @@ const TIERS = [
 
 export function PricingPreview({ installHref }: PricingPreviewProps) {
   return (
-    <section className="bg-white" id="pricing">
-      <div className="mx-auto max-w-6xl px-6 py-20">
+    <section className="relative bg-[#0d1117] py-24" id="pricing">
+      <div
+        className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent"
+        aria-hidden
+      />
+      <div className="mx-auto max-w-7xl px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
-            Simple pricing. Start free.
-          </h2>
-          <p className="mt-3 text-base text-gray-600">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
+          >
+            Simple pricing.{" "}
+            <span className="text-gradient-cyan">Start free.</span>
+          </motion.h2>
+          <p className="mt-4 text-base text-slate-400">
             No credit card required. Cancel anytime. Upgrade when you&apos;re
             ready.
           </p>
@@ -95,43 +117,39 @@ export function PricingPreview({ installHref }: PricingPreviewProps) {
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              whileHover={{ y: -4 }}
+              transition={{ duration: 0.5, delay: i * 0.08 }}
               className={cn(
-                "relative flex flex-col rounded-2xl border bg-white p-8 transition-shadow",
+                "relative flex flex-col rounded-2xl border p-7 backdrop-blur-xl transition-all",
                 tier.popular
-                  ? "border-blue-500 shadow-xl shadow-blue-600/10"
-                  : "border-gray-200 shadow-sm hover:shadow-md",
+                  ? "border-cyan-500/50 bg-gradient-to-b from-cyan-500/[0.08] to-white/[0.02] shadow-glow"
+                  : "border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-white/[0.06]",
               )}
             >
               {tier.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-md">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-cyan-500 px-3 py-1 font-display text-[10px] font-bold uppercase tracking-[0.15em] text-black shadow-glow-sm">
                   Most Popular
                 </span>
               )}
 
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="font-display text-lg font-semibold text-white">
                   {tier.name}
                 </h3>
-                <p className="mt-1 text-sm text-gray-500">{tier.blurb}</p>
+                <p className="mt-1 text-xs text-slate-400">{tier.blurb}</p>
               </div>
 
               <div className="mt-5 flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-gray-900">
+                <span className="font-display text-5xl font-bold text-white">
                   {tier.price}
                 </span>
-                <span className="text-sm text-gray-500">{tier.cadence}</span>
+                <span className="text-sm text-slate-500">{tier.cadence}</span>
               </div>
 
               <ul className="mt-6 flex-1 space-y-3">
                 {tier.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <Check
-                      className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600"
-                      aria-hidden
-                    />
-                    <span className="text-gray-700">{f}</span>
+                  <li key={f} className="flex items-start gap-2.5 text-sm">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-cyan-400" />
+                    <span className="text-slate-300">{f}</span>
                   </li>
                 ))}
               </ul>
@@ -139,10 +157,10 @@ export function PricingPreview({ installHref }: PricingPreviewProps) {
               <Link
                 href={tier.id === "free" ? installHref : "/pricing"}
                 className={cn(
-                  "mt-8 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition-colors",
+                  "mt-8 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 font-display text-sm font-semibold transition-all",
                   tier.popular
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "border border-gray-300 bg-white text-gray-900 hover:bg-gray-50",
+                    ? "bg-cyan-500 text-black shadow-glow-sm hover:bg-cyan-400 hover:shadow-glow"
+                    : "border border-white/15 bg-white/5 text-white hover:bg-white/10",
                 )}
               >
                 {tier.cta}
@@ -151,9 +169,12 @@ export function PricingPreview({ installHref }: PricingPreviewProps) {
           ))}
         </div>
 
-        <p className="mt-8 text-center text-sm text-gray-500">
+        <p className="mt-10 text-center text-sm text-slate-500">
           Need a custom plan or more details?{" "}
-          <Link href="/pricing" className="text-blue-600 hover:underline">
+          <Link
+            href="/pricing"
+            className="text-cyan-400 transition-colors hover:text-cyan-300"
+          >
             See full pricing →
           </Link>
         </p>
