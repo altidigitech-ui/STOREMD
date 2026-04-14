@@ -131,17 +131,19 @@ export function PricingPreview({ installHref }: PricingPreviewProps) {
               )}
 
               <div>
-                <h3 className="font-display text-lg font-semibold text-white">
+                <h3 className="font-display text-xl font-bold text-white">
                   {tier.name}
                 </h3>
-                <p className="mt-1 text-xs text-slate-400">{tier.blurb}</p>
+                <p className="mt-1.5 text-xs text-slate-400">{tier.blurb}</p>
               </div>
 
               <div className="mt-5 flex items-baseline gap-1">
-                <span className="font-display text-5xl font-bold text-white">
+                <span className="font-display text-5xl font-extrabold text-white">
                   {tier.price}
                 </span>
-                <span className="text-sm text-slate-500">{tier.cadence}</span>
+                <span className="text-sm font-medium text-slate-400">
+                  {tier.cadence}
+                </span>
               </div>
 
               <ul className="mt-6 flex-1 space-y-3">

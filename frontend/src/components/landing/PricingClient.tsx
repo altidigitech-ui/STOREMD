@@ -111,31 +111,35 @@ export function PricingClient() {
   return (
     <>
       {error && (
-        <p className="mb-4 text-center text-sm text-red-600">{error}</p>
+        <p className="mb-4 text-center text-sm text-red-400">{error}</p>
       )}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {PLANS.map((plan) => (
           <div
             key={plan.id}
             className={cn(
-              "relative flex flex-col rounded-lg border bg-white p-6",
+              "relative flex flex-col rounded-2xl border p-7 backdrop-blur-xl",
               plan.mostPopular
-                ? "border-blue-500 shadow-md"
-                : "border-gray-200",
+                ? "border-cyan-500/50 bg-gradient-to-b from-cyan-500/10 to-white/[0.02] shadow-glow"
+                : "border-white/10 bg-white/[0.04]",
             )}
           >
             {plan.mostPopular && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-cyan-500 px-3 py-1 font-display text-[10px] font-bold uppercase tracking-[0.15em] text-black shadow-glow-sm">
                 MOST POPULAR
               </span>
             )}
-            <h2 className="text-lg font-semibold">{plan.name}</h2>
-            <p className="mt-1 text-2xl font-bold">{plan.price}</p>
-            <ul className="mt-4 flex-1 space-y-2 text-sm text-gray-700">
+            <h2 className="font-display text-xl font-bold text-white">
+              {plan.name}
+            </h2>
+            <p className="mt-2 font-display text-4xl font-extrabold text-white">
+              {plan.price}
+            </p>
+            <ul className="mt-5 flex-1 space-y-2.5 text-sm text-slate-300">
               {plan.features.map((f) => (
                 <li key={f} className="flex items-start gap-2">
                   <Check
-                    className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600"
+                    className="mt-0.5 h-4 w-4 flex-shrink-0 text-cyan-400"
                     aria-hidden
                   />
                   <span>{f}</span>
