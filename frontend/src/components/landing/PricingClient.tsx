@@ -31,7 +31,7 @@ const PLANS: PlanDef[] = [
   {
     id: "starter",
     name: "Starter",
-    price: "$39/month",
+    price: "$29/month",
     features: [
       "Everything in Free",
       "Weekly scans",
@@ -48,7 +48,7 @@ const PLANS: PlanDef[] = [
   {
     id: "pro",
     name: "Pro",
-    price: "$99/month",
+    price: "$79/month",
     mostPopular: true,
     features: [
       "Everything in Starter",
@@ -67,7 +67,7 @@ const PLANS: PlanDef[] = [
   {
     id: "agency",
     name: "Agency",
-    price: "$249/month",
+    price: "$199/month",
     features: [
       "Everything in Pro",
       "10 stores",

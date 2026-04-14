@@ -14,7 +14,7 @@ const TIERS = [
     id: "free",
     name: "Free",
     price: "$0",
-    cadence: "forever",
+    cadence: "/month",
     blurb: "Try StoreMD risk-free",
     features: [
       "1 full audit",
@@ -27,7 +27,7 @@ const TIERS = [
   {
     id: "starter",
     name: "Starter",
-    price: "$39",
+    price: "$29",
     cadence: "/month",
     blurb: "For active merchants",
     features: [
@@ -39,12 +39,11 @@ const TIERS = [
       "Ghost billing detection",
     ],
     cta: "Upgrade to Starter",
-    popular: true,
   },
   {
     id: "pro",
     name: "Pro",
-    price: "$99",
+    price: "$79",
     cadence: "/month",
     blurb: "For serious stores",
     features: [
@@ -56,6 +55,22 @@ const TIERS = [
       "Priority support",
     ],
     cta: "Upgrade to Pro",
+    popular: true,
+  },
+  {
+    id: "agency",
+    name: "Agency",
+    price: "$199",
+    cadence: "/month",
+    blurb: "For agencies & power users",
+    features: [
+      "Everything in Pro",
+      "Unlimited scans",
+      "Multi-store support",
+      "Dedicated account manager",
+      "Custom integrations",
+    ],
+    cta: "Upgrade to Agency",
   },
 ];
 
@@ -73,7 +88,7 @@ export function PricingPreview({ installHref }: PricingPreviewProps) {
           </p>
         </div>
 
-        <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {TIERS.map((tier, i) => (
             <motion.div
               key={tier.id}
@@ -137,7 +152,7 @@ export function PricingPreview({ installHref }: PricingPreviewProps) {
         </div>
 
         <p className="mt-8 text-center text-sm text-gray-500">
-          Need Agency ($249/mo) with 10 stores and white-label?{" "}
+          Need a custom plan or more details?{" "}
           <Link href="/pricing" className="text-blue-600 hover:underline">
             See full pricing →
           </Link>

@@ -1,4 +1,5 @@
 import { Hero } from "@/components/landing/Hero";
+import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { PainPoints } from "@/components/landing/PainPoints";
 import { Solution } from "@/components/landing/Solution";
 import { HowItWorks } from "@/components/landing/HowItWorks";
@@ -11,7 +12,7 @@ export const metadata = {
   title:
     "StoreMD — Find out how much your Shopify store is losing. Free audit in 60s.",
   description:
-    "StoreMD scans your Shopify store in 60 seconds — slow apps, broken tracking, ghost charges, AI readiness. Free forever. No credit card.",
+    "StoreMD scans your Shopify store in 60 seconds — slow apps, broken tracking, ghost charges, AI readiness. Free plan available. No credit card required.",
 };
 
 export default function LandingPage() {
@@ -21,13 +22,14 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
+      <LandingNavbar />
       <Hero installHref={installHref} />
       <PainPoints />
       <Solution />
       <HowItWorks />
       <AntiBloat />
       <PricingPreview installHref={installHref} />
-      <section className="border-t border-gray-100 bg-gray-50">
+      <section id="faq" className="border-t border-gray-100 bg-gray-50">
         <div className="mx-auto max-w-6xl px-6 py-20">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">

@@ -70,7 +70,7 @@ export function Hero({ installHref }: HeroProps) {
               />
             </Link>
             <p className="text-xs text-gray-500">
-              Free forever. No credit card. Installs in 1 click.
+              Free plan available. No credit card. Installs in 1 click.
             </p>
           </motion.div>
         </div>
