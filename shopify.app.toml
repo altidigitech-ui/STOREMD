@@ -3,7 +3,7 @@
 client_id = "74e857f2fb3f3944ed97d0c275c8ab65"
 name = "StoreMD"
 application_url = "https://storemd.vercel.app"
-embedded = true
+embedded = false
 
 [build]
 dev_store_url = "storemdtest.myshopify.com"
