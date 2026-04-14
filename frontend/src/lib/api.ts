@@ -283,6 +283,87 @@ class ApiClient {
     latest: (storeId: string): Promise<WeeklyReportResponse> =>
       this.fetchWithAuth(`/api/v1/stores/${storeId}/reports/latest`),
   };
+
+  // ────────────── Admin (altidigitech@gmail.com only) ──────────────
+  admin = {
+    overview: (): Promise<AdminOverview> =>
+      this.fetchWithAuth(`/api/v1/admin/overview`),
+    merchants: (): Promise<{ merchants: AdminMerchant[] }> =>
+      this.fetchWithAuth(`/api/v1/admin/merchants`),
+    scans: (limit: number = 50): Promise<{ scans: AdminScan[] }> =>
+      this.fetchWithAuth(`/api/v1/admin/scans`, { query: { limit } }),
+    errors: (limit: number = 50): Promise<{ errors: AdminError[] }> =>
+      this.fetchWithAuth(`/api/v1/admin/errors`, { query: { limit } }),
+    analytics: (): Promise<AdminAnalytics> =>
+      this.fetchWithAuth(`/api/v1/admin/analytics`),
+  };
+}
+
+export interface AdminOverview {
+  total_merchants: number;
+  total_stores: number;
+  total_scans: number;
+  scans_today: number;
+  scans_this_week: number;
+  active_subscriptions: number;
+  mrr: number;
+  avg_health_score: number | null;
+  visits_today: number;
+  visits_this_week: number;
+  visits_this_month: number;
+  unique_visitors_today: number;
+  installs_today: number;
+  conversion_rate: number;
+}
+
+export interface AdminMerchant {
+  id: string;
+  email: string;
+  plan: string;
+  billing_provider: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  shopify_shop_domain: string | null;
+  created_at: string;
+  last_scan_score?: number | null;
+}
+
+export interface AdminScan {
+  id: string;
+  store_id: string;
+  status: string;
+  score: number | null;
+  duration_ms: number | null;
+  duration_seconds?: number | null;
+  created_at: string;
+  shopify_shop_domain?: string | null;
+}
+
+export interface AdminError {
+  id: string;
+  source: string;
+  topic: string;
+  shop_domain: string | null;
+  processing_error: string | null;
+  retry_count: number;
+  created_at: string;
+}
+
+export interface AdminAnalytics {
+  visits_by_day: { date: string; visits: number; unique_visitors: number }[];
+  visits_by_source: { source: string; visits: number; installs: number }[];
+  visits_by_campaign: { campaign: string; visits: number; installs: number }[];
+  visits_by_device: { device: string; visits: number }[];
+  top_pages: { path: string; visits: number }[];
+  funnel: {
+    landing_visits: number;
+    cta_clicks: number;
+    install_starts: number;
+    install_completes: number;
+    paid_conversions: number;
+    installs_total: number;
+  };
 }
 
 function extractError(parsed: unknown, status: number): ApiErrorShape {

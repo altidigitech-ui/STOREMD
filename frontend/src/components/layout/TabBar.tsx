@@ -8,13 +8,16 @@ import {
   Sparkles,
   MonitorSmartphone,
   Settings as SettingsIcon,
+  ShieldCheck,
   Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isAdmin } from "@/lib/admin";
 import type { Plan } from "@/types";
 
 interface TabBarProps {
   plan: Plan;
+  email?: string | null;
 }
 
 interface TabDef {
@@ -75,8 +78,9 @@ function isLocked(tab: TabDef, plan: Plan): boolean {
   return PLAN_RANK[plan] < PLAN_RANK[tab.requiredPlan];
 }
 
-export function TabBar({ plan }: TabBarProps) {
+export function TabBar({ plan, email }: TabBarProps) {
   const pathname = usePathname();
+  const showAdmin = isAdmin(email);
 
   return (
     <nav className="flex items-center gap-1 py-2">
@@ -109,6 +113,21 @@ export function TabBar({ plan }: TabBarProps) {
           </Link>
         );
       })}
+      {showAdmin && (
+        <Link
+          href="/dashboard/admin"
+          data-testid="tab-admin"
+          className={cn(
+            "ml-2 flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+            pathname?.startsWith("/dashboard/admin")
+              ? "bg-purple-50 text-purple-700"
+              : "text-purple-600 hover:bg-purple-50",
+          )}
+        >
+          <ShieldCheck className="h-4 w-4" aria-hidden />
+          <span>Admin</span>
+        </Link>
+      )}
     </nav>
   );
 }

@@ -12,6 +12,7 @@ import type { Plan } from "@/types";
 interface MerchantSession {
   plan: Plan;
   onboardingCompleted: boolean;
+  email: string | null;
 }
 
 export default function DashboardLayout({
@@ -49,13 +50,14 @@ export default function DashboardLayout({
         >;
         const plan = (meta.plan as Plan | undefined) ?? "free";
         const onboardingCompleted = Boolean(meta.onboarding_completed);
+        const email = data.session.user.email ?? null;
 
         if (!onboardingCompleted) {
           router.replace("/onboarding");
           return;
         }
 
-        setSession({ plan, onboardingCompleted });
+        setSession({ plan, onboardingCompleted, email });
       } finally {
         if (!cancelled) setChecking(false);
       }
@@ -96,11 +98,11 @@ export default function DashboardLayout({
             <div className="h-7 w-7 rounded bg-blue-600" aria-hidden />
             <span className="text-base font-semibold">StoreMD</span>
           </div>
-          <MobileNav plan={session.plan} />
+          <MobileNav plan={session.plan} email={session.email} />
         </div>
         <div className="hidden border-t border-gray-100 md:block">
           <div className="mx-auto max-w-6xl px-4">
-            <TabBar plan={session.plan} />
+            <TabBar plan={session.plan} email={session.email} />
           </div>
         </div>
       </header>

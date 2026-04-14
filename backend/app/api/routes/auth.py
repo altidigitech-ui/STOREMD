@@ -1,5 +1,6 @@
 """Shopify OAuth install/callback routes."""
 
+import json
 import re
 import secrets
 from datetime import UTC, datetime
@@ -28,6 +29,12 @@ SHOP_DOMAIN_REGEX = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9\-]*\.myshopify\.com$")
 @router.get("/install")
 async def install(
     shop: str,
+    utm_source: str | None = None,
+    utm_medium: str | None = None,
+    utm_campaign: str | None = None,
+    utm_content: str | None = None,
+    utm_term: str | None = None,
+    session_id: str | None = None,
     redis=Depends(get_redis),
 ):
     """Validate shop domain, generate state, redirect to Shopify consent."""
@@ -39,9 +46,19 @@ async def install(
             status_code=400,
         )
 
-    # Generate anti-CSRF state nonce, store in Redis with 5 min TTL
+    # Generate anti-CSRF state nonce, stash shop + UTM payload in Redis
+    # so the callback can attribute the install. 5 min TTL.
     state = secrets.token_urlsafe(32)
-    await redis.setex(f"oauth_state:{state}", 300, shop)
+    state_payload = {
+        "shop": shop,
+        "utm_source": utm_source,
+        "utm_medium": utm_medium,
+        "utm_campaign": utm_campaign,
+        "utm_content": utm_content,
+        "utm_term": utm_term,
+        "session_id": session_id,
+    }
+    await redis.setex(f"oauth_state:{state}", 300, json.dumps(state_payload))
 
     # Build Shopify consent URL
     scopes = settings.SHOPIFY_SCOPES
@@ -69,15 +86,36 @@ async def callback(
     supabase=Depends(get_supabase_service),
 ):
     """Validate state, exchange code for token, store encrypted, redirect to dashboard."""
-    # Validate state (anti-CSRF)
-    stored_shop = await redis.get(f"oauth_state:{state}")
-    if not stored_shop or stored_shop != shop:
+    # Validate state (anti-CSRF). Stored value is JSON {shop, utm_*, session_id}
+    # but legacy installs stored only the bare shop string — handle both.
+    raw_state = await redis.get(f"oauth_state:{state}")
+    if not raw_state:
+        raise AuthError(
+            code=ErrorCode.OAUTH_STATE_INVALID,
+            message="Invalid or expired OAuth state",
+            status_code=403,
+        )
+
+    try:
+        state_payload = json.loads(raw_state)
+        if not isinstance(state_payload, dict):
+            raise ValueError("state payload is not a dict")
+    except (ValueError, json.JSONDecodeError):
+        state_payload = {"shop": raw_state}
+
+    if state_payload.get("shop") != shop:
         raise AuthError(
             code=ErrorCode.OAUTH_STATE_INVALID,
             message="Invalid or expired OAuth state",
             status_code=403,
         )
     await redis.delete(f"oauth_state:{state}")
+
+    utm_payload = {
+        k: state_payload.get(k)
+        for k in ("utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term")
+    }
+    install_session_id = state_payload.get("session_id")
 
     # Validate shop domain
     if not SHOP_DOMAIN_REGEX.match(shop):
@@ -153,14 +191,39 @@ async def callback(
         )
         merchant_id = auth_response.user.id
 
-        supabase.table("merchants").update(
-            {
-                "shopify_shop_domain": shop,
-                "shopify_access_token_encrypted": encrypted_token,
-                "shopify_scopes": granted_scopes,
-                "shopify_installed_at": datetime.now(UTC).isoformat(),
-            }
-        ).eq("id", merchant_id).execute()
+        new_merchant_update: dict = {
+            "shopify_shop_domain": shop,
+            "shopify_access_token_encrypted": encrypted_token,
+            "shopify_scopes": granted_scopes,
+            "shopify_installed_at": datetime.now(UTC).isoformat(),
+        }
+        # Only record UTM attribution on the *first* install of a merchant.
+        for k, v in utm_payload.items():
+            if v:
+                new_merchant_update[k] = v
+        supabase.table("merchants").update(new_merchant_update).eq(
+            "id", merchant_id
+        ).execute()
+
+        # Fire an install_complete tracking event so the funnel in the admin
+        # dashboard can join landing visits → install. Best-effort.
+        if install_session_id:
+            try:
+                supabase.table("tracking_events").insert(
+                    {
+                        "session_id": install_session_id,
+                        "event_name": "install_complete",
+                        "event_data": {
+                            "shop": shop,
+                            "merchant_id": merchant_id,
+                        },
+                        "utm_source": utm_payload.get("utm_source"),
+                        "utm_medium": utm_payload.get("utm_medium"),
+                        "utm_campaign": utm_payload.get("utm_campaign"),
+                    }
+                ).execute()
+            except Exception as exc:  # noqa: BLE001 — non-blocking
+                logger.warning("install_complete_event_failed", error=str(exc))
 
         merchant_result = (
             supabase.table("merchants")

@@ -4,10 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isAdmin } from "@/lib/admin";
 import type { Plan } from "@/types";
 
 interface MobileNavProps {
   plan: Plan;
+  email?: string | null;
 }
 
 const LINKS = [
@@ -25,8 +27,9 @@ const PLAN_RANK: Record<Plan, number> = {
   agency: 3,
 };
 
-export function MobileNav({ plan }: MobileNavProps) {
+export function MobileNav({ plan, email }: MobileNavProps) {
   const [open, setOpen] = useState(false);
+  const showAdmin = isAdmin(email);
 
   return (
     <div className="md:hidden">
@@ -77,6 +80,17 @@ export function MobileNav({ plan }: MobileNavProps) {
                 </li>
               );
             })}
+            {showAdmin && (
+              <li>
+                <Link
+                  href="/dashboard/admin"
+                  className="flex items-center justify-between px-4 py-3 text-sm text-purple-700 hover:bg-purple-50"
+                  onClick={() => setOpen(false)}
+                >
+                  <span>Admin</span>
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
       )}
