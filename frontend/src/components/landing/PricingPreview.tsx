@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { InstallLink } from "./InstallLink";
 
 interface PricingPreviewProps {
   installHref: string;
@@ -96,8 +97,7 @@ export function PricingPreview({ installHref }: PricingPreviewProps) {
         <div className="mx-auto max-w-2xl text-center">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
@@ -115,8 +115,7 @@ export function PricingPreview({ installHref }: PricingPreviewProps) {
             <motion.div
               key={tier.id}
               initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
               className={cn(
                 "relative flex flex-col rounded-2xl border p-7 backdrop-blur-xl transition-all",
@@ -154,17 +153,32 @@ export function PricingPreview({ installHref }: PricingPreviewProps) {
                 ))}
               </ul>
 
-              <Link
-                href={tier.id === "free" ? installHref : "/pricing"}
-                className={cn(
-                  "mt-8 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 font-display text-sm font-semibold transition-all",
-                  tier.popular
-                    ? "bg-cyan-500 text-black shadow-glow-sm hover:bg-cyan-400 hover:shadow-glow"
-                    : "border border-white/15 bg-white/5 text-white hover:bg-white/10",
-                )}
-              >
-                {tier.cta}
-              </Link>
+              {tier.id === "free" ? (
+                <InstallLink
+                  href={installHref}
+                  label={`pricing_${tier.id}_install`}
+                  className={cn(
+                    "mt-8 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 font-display text-sm font-semibold transition-all",
+                    tier.popular
+                      ? "bg-cyan-500 text-black shadow-glow-sm hover:bg-cyan-400 hover:shadow-glow"
+                      : "border border-white/15 bg-white/5 text-white hover:bg-white/10",
+                  )}
+                >
+                  {tier.cta}
+                </InstallLink>
+              ) : (
+                <Link
+                  href="/pricing"
+                  className={cn(
+                    "mt-8 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 font-display text-sm font-semibold transition-all",
+                    tier.popular
+                      ? "bg-cyan-500 text-black shadow-glow-sm hover:bg-cyan-400 hover:shadow-glow"
+                      : "border border-white/15 bg-white/5 text-white hover:bg-white/10",
+                  )}
+                >
+                  {tier.cta}
+                </Link>
+              )}
             </motion.div>
           ))}
         </div>

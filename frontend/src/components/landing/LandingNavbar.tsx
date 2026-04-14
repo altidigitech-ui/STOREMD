@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { InstallLink } from "./InstallLink";
 
 interface LandingNavbarProps {
   installHref: string;
@@ -65,13 +66,14 @@ export function LandingNavbar({ installHref }: LandingNavbarProps) {
           >
             Log in
           </Link>
-          <Link
+          <InstallLink
             href={installHref}
+            label="navbar_install"
             className="group inline-flex items-center gap-1.5 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-black shadow-glow-sm transition-all hover:bg-cyan-400 hover:shadow-glow"
           >
             Get free audit
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-          </Link>
+          </InstallLink>
         </div>
 
         <button
@@ -105,14 +107,14 @@ export function LandingNavbar({ installHref }: LandingNavbarProps) {
             >
               Log in
             </Link>
-            <Link
+            <InstallLink
               href={installHref}
-              onClick={() => setOpen(false)}
+              label="navbar_mobile_install"
               className="mt-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-black"
             >
               Get free audit
               <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            </InstallLink>
           </div>
         </div>
       )}

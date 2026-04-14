@@ -34,8 +34,7 @@ export function HowItWorks() {
         <div className="mx-auto max-w-2xl text-center">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
@@ -69,8 +68,7 @@ export function HowItWorks() {
               strokeWidth="2"
               strokeDasharray="8 8"
               initial={{ pathLength: 0 }}
-              whileInView={{ pathLength: 1 }}
-              viewport={{ once: true }}
+              animate={{ pathLength: 1 }}
               transition={{ duration: 1.5, ease: "easeInOut" }}
             />
           </svg>
@@ -80,8 +78,7 @@ export function HowItWorks() {
               <motion.div
                 key={step.title}
                 initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: i * 0.15 }}
                 className="relative rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center backdrop-blur-xl"
               >

@@ -102,7 +102,11 @@ function parseUserAgent(ua: string): UaInfo {
   else if (/iphone|ipad|ios/.test(lower)) os = "ios";
   else if (/linux/.test(lower)) os = "linux";
 
-  return { device, browser, os };
+  return {
+    device: device.slice(0, 32),
+    browser: browser.slice(0, 64),
+    os: os.slice(0, 64),
+  };
 }
 
 function send(path: string, body: Record<string, unknown>): void {

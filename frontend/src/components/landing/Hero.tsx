@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { DashboardMockup } from "./DashboardMockup";
+import { InstallLink } from "./InstallLink";
 
 interface HeroProps {
   installHref: string;
@@ -60,8 +60,9 @@ export function Hero({ installHref }: HeroProps) {
             transition={{ duration: 0.6, delay: 0.28 }}
             className="mt-10 flex flex-col items-center gap-4 lg:items-start"
           >
-            <Link
+            <InstallLink
               href={installHref}
+              label="hero_install"
               className="group relative inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-8 py-4 font-display text-base font-bold text-black shadow-glow transition-all hover:bg-cyan-400 hover:shadow-[0_0_60px_rgba(6,182,212,0.6)] focus:outline-none focus:ring-4 focus:ring-cyan-500/30"
             >
               <span
@@ -70,7 +71,7 @@ export function Hero({ installHref }: HeroProps) {
               />
               Get your free health score
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-            </Link>
+            </InstallLink>
             <p className="flex items-center gap-2 text-sm text-slate-500">
               <span>Free plan</span>
               <span className="text-slate-700">·</span>
