@@ -147,7 +147,12 @@ class StripeBillingService:
     # ─── PLAN CHECKING ───
 
     def check_plan_access(self, merchant_id: str, feature: str) -> bool:
-        """Check if the merchant's plan grants access to a feature."""
+        """Check if the merchant's plan grants access to a feature.
+
+        Provider-agnostic: only reads the ``plan`` column on merchants.
+        Works whether the merchant subscribed through Stripe or Shopify
+        Billing — ``billing_provider`` is irrelevant here.
+        """
         required_plan = FEATURE_PLAN_REQUIREMENTS.get(feature, "pro")
         merchant = self._get_merchant(merchant_id)
         current_plan = merchant.get("plan", "free")

@@ -64,6 +64,7 @@ async def callback(
     code: str,
     state: str,
     shop: str,
+    charge_id: str | None = None,
     redis=Depends(get_redis),
     supabase=Depends(get_supabase_service),
 ):
@@ -230,6 +231,42 @@ async def callback(
             ).execute()
     except Exception as exc:  # noqa: BLE001 — non-blocking, scan will fill later
         logger.warning("store_name_fetch_failed", shop=shop, error=str(exc))
+
+    # If Shopify appended a charge_id to the callback (merchant confirmed a
+    # billing charge before completing OAuth), look up the active subscription
+    # and activate the corresponding plan. Non-blocking on failure.
+    if charge_id:
+        try:
+            from app.services.shopify_billing import (
+                ShopifyBillingService,
+                plan_from_subscription_name,
+            )
+
+            billing_service = ShopifyBillingService(shop, access_token)
+            active = await billing_service.get_active_subscription()
+            if active and active.get("status") == "ACTIVE":
+                resolved_plan = plan_from_subscription_name(active.get("name"))
+                supabase.table("merchants").update(
+                    {
+                        "plan": resolved_plan,
+                        "billing_provider": "shopify",
+                        "shopify_subscription_id": active.get("id"),
+                    }
+                ).eq("id", merchant["id"]).execute()
+                logger.info(
+                    "oauth_billing_activated",
+                    shop=shop,
+                    merchant_id=merchant["id"],
+                    plan=resolved_plan,
+                    charge_id=charge_id,
+                )
+        except Exception as exc:  # noqa: BLE001 — non-blocking
+            logger.warning(
+                "oauth_billing_activation_failed",
+                shop=shop,
+                charge_id=charge_id,
+                error=str(exc),
+            )
 
     # Stash the resolved store_id in app_metadata so the frontend can read it
     # from session.user.app_metadata.active_store_id after Supabase signs the

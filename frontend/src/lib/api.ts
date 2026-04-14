@@ -18,6 +18,8 @@ import type {
   Scan,
   ScanDetailResponse,
   ScanModule,
+  ShopifyBillingStatusResponse,
+  ShopifySubscribeResponse,
   SimulationResponse,
   Store,
   StoreAppsResponse,
@@ -163,6 +165,21 @@ class ApiClient {
       this.fetchWithAuth(`/api/v1/billing/portal`),
     getUsage: (): Promise<UsageResponse> =>
       this.fetchWithAuth(`/api/v1/billing/usage`),
+  };
+
+  // ────────────── Shopify Billing ──────────────
+  shopifyBilling = {
+    subscribe: (plan: Plan): Promise<ShopifySubscribeResponse> =>
+      this.fetchWithAuth(`/api/v1/shopify-billing/subscribe`, {
+        method: "POST",
+        body: { plan },
+      }),
+    status: (): Promise<ShopifyBillingStatusResponse> =>
+      this.fetchWithAuth(`/api/v1/shopify-billing/status`),
+    cancel: (): Promise<{ status: string }> =>
+      this.fetchWithAuth(`/api/v1/shopify-billing/cancel`, {
+        method: "DELETE",
+      }),
   };
 
   // ────────────── Notifications ──────────────

@@ -202,6 +202,21 @@ export interface PortalResponse {
   portal_url: string;
 }
 
+// ────────────────── Shopify Billing ──────────────────
+export type BillingProvider = "shopify" | "stripe" | null;
+
+export interface ShopifySubscribeResponse {
+  confirmation_url: string;
+  subscription_id: string;
+}
+
+export interface ShopifyBillingStatusResponse {
+  plan: Plan;
+  billing_provider: BillingProvider;
+  subscription_id: string | null;
+  active_subscription: Record<string, unknown> | null;
+}
+
 // ────────────────── Feedback ──────────────────
 export type FeedbackCategory =
   | "not_relevant"

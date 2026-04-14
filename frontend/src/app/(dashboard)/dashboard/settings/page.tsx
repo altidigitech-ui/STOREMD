@@ -8,7 +8,23 @@ import { Button } from "@/components/ui/Button";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { useToast } from "@/components/ui/Toast";
-import type { Store, UsageResponse } from "@/types";
+import type {
+  BillingProvider,
+  Plan,
+  Store,
+  UsageResponse,
+} from "@/types";
+
+const PLAN_ORDER: Record<Plan, number> = {
+  free: 0,
+  starter: 1,
+  pro: 2,
+  agency: 3,
+};
+
+function planRank(plan: Plan): number {
+  return PLAN_ORDER[plan] ?? 0;
+}
 
 export default function SettingsPage() {
   const { storeId } = useCurrentStore();
@@ -16,6 +32,9 @@ export default function SettingsPage() {
 
   const [store, setStore] = useState<Store | null>(null);
   const [usage, setUsage] = useState<UsageResponse | null>(null);
+  const [billingProvider, setBillingProvider] =
+    useState<BillingProvider>(null);
+  const [upgrading, setUpgrading] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,13 +46,15 @@ export default function SettingsPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [storeData, usageData] = await Promise.all([
+        const [storeData, usageData, statusData] = await Promise.all([
           api.stores.get(storeId),
           api.billing.getUsage(),
+          api.shopifyBilling.status().catch(() => null),
         ]);
         if (cancelled) return;
         setStore(storeData);
         setUsage(usageData);
+        setBillingProvider(statusData?.billing_provider ?? null);
       } catch (e) {
         if (!cancelled) {
           setError(
@@ -60,6 +81,31 @@ export default function SettingsPage() {
           e instanceof ApiError ? e.message : "Please try again.",
         variant: "destructive",
       });
+    }
+  }
+
+  // Merchants that came from the Shopify App Store (or haven't subscribed yet)
+  // go through Shopify Billing. Explicit Stripe subscribers keep using Stripe.
+  const useShopifyBilling = billingProvider !== "stripe";
+
+  async function handleUpgrade(plan: Plan) {
+    setUpgrading(plan);
+    try {
+      if (useShopifyBilling) {
+        const { confirmation_url } = await api.shopifyBilling.subscribe(plan);
+        window.location.href = confirmation_url;
+      } else {
+        const { checkout_url } = await api.billing.createCheckout(plan);
+        window.location.href = checkout_url;
+      }
+    } catch (e) {
+      toast({
+        title: "Could not start upgrade",
+        description:
+          e instanceof ApiError ? e.message : "Please try again.",
+        variant: "destructive",
+      });
+      setUpgrading(null);
     }
   }
 
@@ -157,11 +203,36 @@ export default function SettingsPage() {
               </div>
             </>
           )}
-          <div className="mt-4">
-            <Button variant="outline" onClick={handleManageBilling}>
-              Manage subscription
-            </Button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(["starter", "pro", "agency"] as const).map((plan) => {
+              const currentPlan = (usage?.plan ?? "free") as Plan;
+              if (currentPlan === plan) return null;
+              const isUpgrade =
+                planRank(plan) > planRank(currentPlan);
+              return (
+                <Button
+                  key={plan}
+                  variant={isUpgrade ? "default" : "outline"}
+                  disabled={upgrading !== null}
+                  onClick={() => handleUpgrade(plan)}
+                >
+                  {upgrading === plan
+                    ? "Redirecting…"
+                    : `${isUpgrade ? "Upgrade" : "Switch"} to ${plan[0].toUpperCase()}${plan.slice(1)}`}
+                </Button>
+              );
+            })}
+            {!useShopifyBilling && (
+              <Button variant="outline" onClick={handleManageBilling}>
+                Manage subscription
+              </Button>
+            )}
           </div>
+          <p className="mt-2 text-xs text-gray-500">
+            {useShopifyBilling
+              ? "Billed through Shopify — charges appear on your Shopify invoice."
+              : "Billed through Stripe."}
+          </p>
         </CardContent>
       </Card>
 
