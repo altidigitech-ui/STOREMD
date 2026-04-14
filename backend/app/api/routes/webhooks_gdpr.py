@@ -12,6 +12,7 @@ StoreMD does NOT store customer PII, so customer endpoints are acknowledgement-o
 from __future__ import annotations
 
 import json
+import re
 
 import structlog
 from fastapi import APIRouter, Request
@@ -24,14 +25,24 @@ logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/v1/webhooks", tags=["gdpr"])
 
+_SHOP_DOMAIN_REGEX = re.compile(
+    r"^[a-zA-Z0-9][a-zA-Z0-9\-]*\.myshopify\.com$"
+)
+
 
 def _extract_shop(request: Request, payload: dict) -> str:
-    """Shopify sends shop domain in header; fall back to payload field."""
-    return (
+    """Shopify sends shop domain in header; fall back to payload field.
+
+    The HMAC check above us guarantees the body wasn't tampered with, but
+    we still validate the format defensively — a misrouted/spoofed header
+    must never reach a `.eq("shopify_shop_domain", shop)` query as a wildcard.
+    """
+    candidate = (
         request.headers.get("X-Shopify-Shop-Domain")
         or payload.get("shop_domain")
         or ""
     )
+    return candidate if _SHOP_DOMAIN_REGEX.match(candidate) else ""
 
 
 @router.post("/customers/data_request")

@@ -49,24 +49,68 @@ app = FastAPI(
 # CORS
 # ---------------------------------------------------------------------------
 
-_STATIC_ORIGINS = {
-    settings.APP_URL,
+_PRODUCTION_ORIGINS = {
     "https://storemd.vercel.app",
     "https://storemd-altidigitechs-projects.vercel.app",
     "https://storemd-git-main-altidigitechs-projects.vercel.app",
+}
+
+# Local dev only — never injected in production.
+_DEV_ORIGINS = {
+    settings.APP_URL,
     "http://localhost:3000",
 }
 
+_allowed_origins = _PRODUCTION_ORIGINS | (
+    _DEV_ORIGINS if not settings.is_production else set()
+)
+
+# In production we accept Vercel preview deployments from this project only —
+# the regex is anchored on both ends so e.g. `storemd-x.evil.com` won't match.
+# In production we DROP `allow_credentials` for previews by using a separate
+# header allow-list: previews can hit the API for testing but cannot replay
+# session cookies from production.
+_preview_regex = (
+    r"^https://storemd-[a-z0-9]+-altidigitechs-projects\.vercel\.app$"
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=sorted(_STATIC_ORIGINS),
-    # Also allow any Vercel preview URL for this project
-    # (e.g. storemd-<hash>-altidigitechs-projects.vercel.app).
-    allow_origin_regex=r"^https://storemd-[a-z0-9]+-altidigitechs-projects\.vercel\.app$",
+    allow_origins=sorted(_allowed_origins),
+    allow_origin_regex=_preview_regex,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Requested-With",
+        "X-Shopify-Hmac-Sha256",
+        "X-Shopify-Topic",
+        "X-Shopify-Shop-Domain",
+        "X-Shopify-Webhook-Id",
+        "Stripe-Signature",
+    ],
+    max_age=600,
 )
+
+# ---------------------------------------------------------------------------
+# Security middleware (order matters — registered last runs first)
+# ---------------------------------------------------------------------------
+
+from app.api.middleware.auth import JWTAuthMiddleware  # noqa: E402
+from app.api.middleware.rate_limit import RateLimitMiddleware  # noqa: E402
+from app.api.middleware.security_headers import (  # noqa: E402
+    SecurityHeadersMiddleware,
+)
+
+# Order: outermost = added last. Request flow:
+#   1. SecurityHeaders   — wraps the response, no-op on request
+#   2. RateLimit         — runs after JWTAuth so it sees merchant_id
+#   3. JWTAuth           — populates request.state.merchant_id for protected routes
+app.add_middleware(JWTAuthMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # ---------------------------------------------------------------------------
 # Exception handlers
@@ -100,11 +144,17 @@ async def validation_error_handler(
         path=request.url.path,
         errors=str(exc.errors()),
     )
-    # Sanitize errors: remove non-serializable ctx values
-    errors = []
-    for err in exc.errors():
-        clean_err = {k: v for k, v in err.items() if k != "ctx"}
-        errors.append(clean_err)
+    # Sanitize errors: drop the `ctx` (often non-serializable) and, in
+    # production, the `input` field too — Pydantic echoes the user-supplied
+    # value back, which is convenient locally but is a minor info-disclosure
+    # vector in prod when the input contains tokens or PII.
+    drop_keys = {"ctx"}
+    if settings.is_production:
+        drop_keys.add("input")
+    errors = [
+        {k: v for k, v in err.items() if k not in drop_keys}
+        for err in exc.errors()
+    ]
 
     return JSONResponse(
         status_code=422,

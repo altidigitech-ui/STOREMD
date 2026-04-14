@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import base64
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import structlog
 from fastapi import APIRouter, Depends, Query
@@ -40,6 +40,15 @@ PLAN_HIERARCHY: dict[str, int] = {
     "starter": 1,
     "pro": 2,
     "agency": 3,
+}
+
+# Per-plan ceiling on manual scans the merchant can trigger in a 24h window.
+# Background cron scans do not count against this — only `trigger == 'manual'`.
+MANUAL_SCAN_DAILY_LIMIT: dict[str, int] = {
+    "free": 3,
+    "starter": 20,
+    "pro": 100,
+    "agency": 500,
 }
 
 
@@ -80,6 +89,30 @@ async def create_scan(
             message="A scan is already running for this store",
             status_code=409,
             context={"existing_scan_id": running.data[0]["id"]},
+        )
+
+    # Per-plan daily quota on manual scans — protects backend cost + Shopify
+    # rate budget from a merchant who scripts the create_scan endpoint.
+    daily_limit = MANUAL_SCAN_DAILY_LIMIT.get(plan, MANUAL_SCAN_DAILY_LIMIT["free"])
+    window_start = (datetime.now(UTC) - timedelta(hours=24)).isoformat()
+    daily_count_res = (
+        supabase.table("scans")
+        .select("id", count="exact", head=True)
+        .eq("merchant_id", merchant["id"])
+        .eq("trigger", "manual")
+        .gte("created_at", window_start)
+        .execute()
+    )
+    daily_count = getattr(daily_count_res, "count", 0) or 0
+    if daily_count >= daily_limit:
+        raise ScanError(
+            code=ErrorCode.SCAN_LIMIT_REACHED,
+            message=(
+                f"Daily manual-scan limit reached for the {plan} plan "
+                f"({daily_limit}/24h). Upgrade to scan more often."
+            ),
+            status_code=429,
+            context={"plan": plan, "limit": daily_limit, "used": daily_count},
         )
 
     # Create scan record

@@ -71,6 +71,7 @@ async def get_current_merchant(request: Request) -> dict:
     Supabase if the middleware was skipped (e.g. direct route testing).
     """
     merchant_id = getattr(request.state, "merchant_id", None)
+    auth_email = getattr(request.state, "auth_email", None)
 
     if not merchant_id:
         auth_header = request.headers.get("Authorization")
@@ -97,6 +98,11 @@ async def get_current_merchant(request: Request) -> dict:
                 status_code=401,
             )
         merchant_id = user.id
+        auth_email = (getattr(user, "email", "") or "").lower()
+        # Populate state so downstream code (admin guard) sees the trusted
+        # email even if the request bypassed the middleware.
+        request.state.merchant_id = merchant_id
+        request.state.auth_email = auth_email
 
     supabase = get_supabase_service()
     result = (
@@ -114,7 +120,12 @@ async def get_current_merchant(request: Request) -> dict:
             status_code=401,
         )
 
-    return result.data[0]
+    merchant = result.data[0]
+    # Override the merchants.email column with the JWT-validated email so
+    # admin checks can't be bypassed by self-mutating the merchants row.
+    if auth_email:
+        merchant["auth_email"] = auth_email
+    return merchant
 
 
 async def get_current_store(

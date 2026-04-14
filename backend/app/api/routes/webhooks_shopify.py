@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 
 import structlog
@@ -16,6 +17,10 @@ from app.dependencies import get_supabase_service
 logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
+
+_SHOP_DOMAIN_REGEX = re.compile(
+    r"^[a-zA-Z0-9][a-zA-Z0-9\-]*\.myshopify\.com$"
+)
 
 
 @router.post("/shopify")
@@ -46,7 +51,13 @@ async def receive_shopify_webhook(request: Request) -> JSONResponse:
 
     # --- Extract headers ---
     topic = request.headers.get("X-Shopify-Topic", "")
-    shop_domain = request.headers.get("X-Shopify-Shop-Domain", "")
+    shop_domain_raw = request.headers.get("X-Shopify-Shop-Domain", "")
+    # Defense in depth — HMAC vouches for the body but not for the header
+    # set; reject anything that isn't a valid myshopify.com host so we never
+    # query the DB with an attacker-controlled wildcard string.
+    shop_domain = (
+        shop_domain_raw if _SHOP_DOMAIN_REGEX.match(shop_domain_raw) else ""
+    )
     webhook_id = request.headers.get("X-Shopify-Webhook-Id", "")
 
     if not webhook_id:

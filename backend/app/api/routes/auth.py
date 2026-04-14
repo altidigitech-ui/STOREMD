@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 
 import httpx
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from fastapi.responses import RedirectResponse
 
@@ -24,10 +24,41 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 SHOP_DOMAIN_REGEX = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9\-]*\.myshopify\.com$")
+# RFC 4122 UUID and our short fallback IDs from frontend tracking.ts.
+SESSION_ID_REGEX = re.compile(r"^[A-Za-z0-9_\-]{8,128}$")
+INSTALL_RATE_LIMIT_PER_MINUTE = 20
+
+
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+async def _enforce_install_rate_limit(request: Request, redis) -> None:
+    """Cap repeated /install hits per IP — anti enumeration / abuse."""
+    ip = _client_ip(request)
+    key = f"install_rl:{ip}"
+    try:
+        count = await redis.incr(key)
+        if count == 1:
+            await redis.expire(key, 60)
+        if count > INSTALL_RATE_LIMIT_PER_MINUTE:
+            raise AuthError(
+                code=ErrorCode.RATE_LIMIT_EXCEEDED,
+                message="Too many install attempts — try again in a minute",
+                status_code=429,
+            )
+    except AuthError:
+        raise
+    except Exception as exc:  # noqa: BLE001 — never block install on Redis hiccup
+        logger.warning("install_rate_limit_error", error=str(exc))
 
 
 @router.get("/install")
 async def install(
+    request: Request,
     shop: str,
     utm_source: str | None = None,
     utm_medium: str | None = None,
@@ -38,13 +69,30 @@ async def install(
     redis=Depends(get_redis),
 ):
     """Validate shop domain, generate state, redirect to Shopify consent."""
+    await _enforce_install_rate_limit(request, redis)
+
     # Validate shop domain
     if not SHOP_DOMAIN_REGEX.match(shop):
         raise AuthError(
             code=ErrorCode.INVALID_SHOP_DOMAIN,
-            message=f"Invalid shop domain: {shop}",
+            message="Invalid shop domain",
             status_code=400,
         )
+
+    # Drop session_id if it doesn't look like one our frontend would mint.
+    # This blocks attackers from injecting arbitrary attribution payloads.
+    if session_id and not SESSION_ID_REGEX.match(session_id):
+        session_id = None
+
+    # Cap UTM lengths so a 1MB query string can't bloat Redis state payloads.
+    def _trim(v: str | None) -> str | None:
+        return v[:128] if isinstance(v, str) else None
+
+    utm_source = _trim(utm_source)
+    utm_medium = _trim(utm_medium)
+    utm_campaign = _trim(utm_campaign)
+    utm_content = _trim(utm_content)
+    utm_term = _trim(utm_term)
 
     # Generate anti-CSRF state nonce, stash shop + UTM payload in Redis
     # so the callback can attribute the install. 5 min TTL.
@@ -121,7 +169,7 @@ async def callback(
     if not SHOP_DOMAIN_REGEX.match(shop):
         raise AuthError(
             code=ErrorCode.INVALID_SHOP_DOMAIN,
-            message=f"Invalid shop domain: {shop}",
+            message="Invalid shop domain",
             status_code=400,
         )
 

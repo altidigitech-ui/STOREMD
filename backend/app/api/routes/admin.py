@@ -29,7 +29,12 @@ PLAN_PRICING_EUR = {
 
 
 def _require_admin(merchant: dict) -> None:
-    if (merchant.get("email") or "").lower() != ADMIN_EMAIL:
+    # auth_email is populated by get_current_merchant from the JWT-validated
+    # auth.users row — the public.merchants.email column is mutable by the
+    # merchant itself (RLS allows row UPDATE on own row), so we must NOT
+    # trust it for privilege checks.
+    trusted = (merchant.get("auth_email") or "").lower()
+    if trusted != ADMIN_EMAIL:
         raise AuthError(
             code=ErrorCode.STORE_ACCESS_DENIED,
             message="Admin access required",
