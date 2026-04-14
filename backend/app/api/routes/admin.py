@@ -10,10 +10,14 @@ from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.core.exceptions import AuthError, ErrorCode
-from app.dependencies import get_current_merchant, get_supabase_service
+from app.dependencies import (
+    get_current_merchant,
+    get_supabase_anon,
+    get_supabase_service,
+)
 
 logger = structlog.get_logger()
 
@@ -42,6 +46,50 @@ def _require_admin(merchant: dict) -> None:
         )
 
 
+async def get_admin_merchant(request: Request) -> dict:
+    """Admin-aware dependency: resolve the current merchant, but if the
+    authenticated JWT belongs to the admin email we tolerate a missing
+    public.merchants row by returning a minimal synthetic dict. This lets
+    the admin dashboard work before the admin has installed the app on a
+    Shopify store.
+    """
+    try:
+        return await get_current_merchant(request)
+    except AuthError:
+        trusted_email = (
+            getattr(request.state, "auth_email", "") or ""
+        ).lower()
+        if not trusted_email:
+            # Middleware may not have populated state if a route was hit
+            # directly; fall back to a live token check so we can still
+            # recognise the admin.
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer "):
+                token = auth_header.removeprefix("Bearer ")
+                try:
+                    user_response = get_supabase_anon().auth.get_user(token)
+                    user = getattr(user_response, "user", None)
+                    trusted_email = (
+                        (getattr(user, "email", "") or "").lower() if user else ""
+                    )
+                    if user is not None and getattr(user, "id", None):
+                        request.state.merchant_id = user.id
+                        request.state.auth_email = trusted_email
+                except Exception:
+                    trusted_email = ""
+
+        if trusted_email == ADMIN_EMAIL:
+            merchant_id = getattr(request.state, "merchant_id", None)
+            return {
+                "id": merchant_id,
+                "email": ADMIN_EMAIL,
+                "auth_email": ADMIN_EMAIL,
+                "plan": "agency",
+                "is_synthetic": True,
+            }
+        raise
+
+
 def _today_utc_start() -> datetime:
     now = datetime.now(UTC)
     return now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -61,7 +109,7 @@ def _count_table(supabase, table: str, *, gte_col: str | None = None, gte_value=
 
 
 @router.get("/overview")
-async def admin_overview(merchant: dict = Depends(get_current_merchant)) -> dict:
+async def admin_overview(merchant: dict = Depends(get_admin_merchant)) -> dict:
     _require_admin(merchant)
     supabase = get_supabase_service()
 
@@ -144,7 +192,7 @@ async def admin_overview(merchant: dict = Depends(get_current_merchant)) -> dict
 
 
 @router.get("/merchants")
-async def admin_merchants(merchant: dict = Depends(get_current_merchant)) -> dict:
+async def admin_merchants(merchant: dict = Depends(get_admin_merchant)) -> dict:
     _require_admin(merchant)
     supabase = get_supabase_service()
 
@@ -186,7 +234,7 @@ async def admin_merchants(merchant: dict = Depends(get_current_merchant)) -> dic
 @router.get("/scans")
 async def admin_scans(
     limit: int = 50,
-    merchant: dict = Depends(get_current_merchant),
+    merchant: dict = Depends(get_admin_merchant),
 ) -> dict:
     _require_admin(merchant)
     supabase = get_supabase_service()
@@ -222,7 +270,7 @@ async def admin_scans(
 @router.get("/errors")
 async def admin_errors(
     limit: int = 50,
-    merchant: dict = Depends(get_current_merchant),
+    merchant: dict = Depends(get_admin_merchant),
 ) -> dict:
     _require_admin(merchant)
     supabase = get_supabase_service()
@@ -240,7 +288,7 @@ async def admin_errors(
 
 
 @router.get("/analytics")
-async def admin_analytics(merchant: dict = Depends(get_current_merchant)) -> dict:
+async def admin_analytics(merchant: dict = Depends(get_admin_merchant)) -> dict:
     _require_admin(merchant)
     supabase = get_supabase_service()
 
