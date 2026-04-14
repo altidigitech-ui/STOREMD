@@ -49,10 +49,10 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=3, minute=15),
         "args": ("agency",),
     },
-    # Weekly digest: Sunday 09:00 UTC for Starter+ merchants.
+    # Weekly digest: Monday 09:00 UTC for Starter+ merchants.
     "weekly-reports": {
         "task": "tasks.report_tasks.send_weekly_reports",
-        "schedule": crontab(hour=9, minute=0, day_of_week="sunday"),
+        "schedule": crontab(hour=9, minute=0, day_of_week="monday"),
     },
     # Cross-store intelligence: daily 5 AM UTC.
     "cross-store-analysis": {

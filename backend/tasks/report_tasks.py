@@ -35,6 +35,7 @@ def send_weekly_reports() -> None:
 
 async def _send_weekly_reports_async() -> None:
     from app.dependencies import get_supabase_service
+    from app.services import email_service
     from app.services.report_generator import generate_weekly_report
 
     supabase = get_supabase_service()
@@ -42,7 +43,7 @@ async def _send_weekly_reports_async() -> None:
     try:
         merchants = (
             supabase.table("merchants")
-            .select("id, plan")
+            .select("id, plan, email, notification_email")
             .in_("plan", list(ELIGIBLE_PLANS))
             .execute()
         )
@@ -55,11 +56,12 @@ async def _send_weekly_reports_async() -> None:
         return
 
     sent = 0
+    emailed = 0
     for merchant in merchants.data:
         try:
             stores = (
                 supabase.table("stores")
-                .select("id")
+                .select("id, shopify_shop_domain")
                 .eq("merchant_id", merchant["id"])
                 .eq("status", "active")
                 .execute()
@@ -72,9 +74,15 @@ async def _send_weekly_reports_async() -> None:
             )
             continue
 
+        recipient = (
+            merchant.get("notification_email") or merchant.get("email") or ""
+        )
+        # Skip the placeholder addresses we mint during OAuth.
+        deliverable = recipient and not recipient.endswith("@storemd.app")
+
         for store in stores.data or []:
             try:
-                await generate_weekly_report(
+                report = await generate_weekly_report(
                     store_id=store["id"],
                     merchant_id=merchant["id"],
                     supabase=supabase,
@@ -86,5 +94,32 @@ async def _send_weekly_reports_async() -> None:
                     store_id=store["id"],
                     error=str(exc),
                 )
+                continue
 
-    logger.info("weekly_reports_dispatched", sent=sent)
+            if not deliverable or not report:
+                continue
+
+            issues_count = (report.get("new_issues") or 0) + max(
+                0,
+                (report.get("score_delta") or 0) * -1,  # rough proxy if no count
+            )
+            top_action = report.get("top_action")
+            try:
+                if email_service.send_weekly_report(
+                    merchant_email=recipient,
+                    shop_domain=store.get("shopify_shop_domain")
+                    or "your store",
+                    current_score=int(report.get("score") or 0),
+                    trend=str(report.get("trend") or "stable"),
+                    issues_count=int(report.get("new_issues") or 0),
+                    top_issue=top_action if top_action else None,
+                ):
+                    emailed += 1
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "weekly_report_email_failed",
+                    store_id=store["id"],
+                    error=str(exc),
+                )
+
+    logger.info("weekly_reports_dispatched", sent=sent, emailed=emailed)

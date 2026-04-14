@@ -480,6 +480,14 @@ class ScanOrchestrator:
         ):
             await self._notify_score_drop(state, previous_score)
 
+        # Transactional emails (welcome on first scan, score-drop on regression).
+        # Queries Supabase directly so we don't rely on Mem0 for "is this the
+        # first scan?" — Mem0 might have been wiped or never wrote.
+        try:
+            await self._send_post_scan_emails(state)
+        except Exception as exc:  # noqa: BLE001 — emails never break a scan
+            logger.warning("post_scan_emails_failed", error=str(exc))
+
         return state
 
     def _update_store_metadata(self, state: AgentState, now: str) -> None:
@@ -619,6 +627,72 @@ class ScanOrchestrator:
             )
         except Exception as exc:  # noqa: BLE001
             logger.warning("score_drop_notification_failed", error=str(exc))
+
+    async def _send_post_scan_emails(self, state: AgentState) -> None:
+        """Welcome on first completed scan + score-drop alert on ≥5 regression.
+
+        Best-effort — if anything fails (missing email, Resend down, query
+        glitch) we just log and move on.
+        """
+        from app.services import email_service
+
+        if state.score is None:
+            return
+
+        merchant_res = (
+            self.supabase.table("merchants")
+            .select("email,notification_email,shopify_shop_domain")
+            .eq("id", state.merchant_id)
+            .single()
+            .execute()
+        )
+        merchant = getattr(merchant_res, "data", None)
+        if not merchant:
+            return
+
+        # Prefer the merchant-configured notification address, fall back to
+        # the Supabase auth email. Skip the placeholder @storemd.app addresses
+        # we mint during OAuth — they don't route anywhere.
+        recipient = merchant.get("notification_email") or merchant.get("email")
+        if not recipient or recipient.endswith("@storemd.app"):
+            return
+
+        shop_domain = merchant.get("shopify_shop_domain") or "your store"
+
+        # Count completed scans (excluding this one) to detect first scan.
+        prior = (
+            self.supabase.table("scans")
+            .select("id,score", count="exact")
+            .eq("store_id", state.store_id)
+            .eq("status", "completed")
+            .neq("id", state.scan_id)
+            .order("completed_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        prior_count = getattr(prior, "count", None)
+        prior_rows = prior.data or []
+        prior_score = prior_rows[0].get("score") if prior_rows else None
+
+        if prior_count == 0:
+            email_service.send_welcome_email(
+                merchant_email=recipient,
+                shop_domain=shop_domain,
+                score=state.score,
+            )
+            return
+
+        if (
+            prior_score is not None
+            and prior_score - state.score >= 5
+        ):
+            email_service.send_score_drop_alert(
+                merchant_email=recipient,
+                shop_domain=shop_domain,
+                old_score=prior_score,
+                new_score=state.score,
+                issues_count=len(state.issues),
+            )
 
     async def _update_memory_after_scan(self, state: AgentState) -> None:
         """Write the new baseline + cross-store signals to Mem0."""

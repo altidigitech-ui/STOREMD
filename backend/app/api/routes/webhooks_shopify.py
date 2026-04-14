@@ -135,6 +135,20 @@ async def _handle_app_uninstalled(shop: str, payload: dict, supabase) -> None:
 
     merchant_id = store["merchant_id"]
 
+    # Grab the merchant's email *before* we strip the token / mark uninstalled
+    # so the feedback email below has a recipient to write to.
+    merchant_row = (
+        supabase.table("merchants")
+        .select("email, notification_email")
+        .eq("id", merchant_id)
+        .maybe_single()
+        .execute()
+    )
+    merchant_data = getattr(merchant_row, "data", None) or {}
+    recipient = (
+        merchant_data.get("notification_email") or merchant_data.get("email")
+    )
+
     # Cancel Stripe subscription
     from app.services.stripe_billing import StripeBillingService
     billing = StripeBillingService(supabase)
@@ -150,6 +164,22 @@ async def _handle_app_uninstalled(shop: str, payload: dict, supabase) -> None:
     supabase.table("merchants").update({
         "shopify_access_token_encrypted": None,
     }).eq("id", merchant_id).execute()
+
+    # Uninstall feedback email — best-effort, never fail the webhook on it.
+    if recipient and not recipient.endswith("@storemd.app"):
+        try:
+            from app.services import email_service
+
+            email_service.send_uninstall_feedback(
+                merchant_email=recipient,
+                shop_domain=shop,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "uninstall_feedback_email_failed",
+                shop=shop,
+                error=str(exc),
+            )
 
     # Mem0 GDPR cleanup — best-effort.
     try:
