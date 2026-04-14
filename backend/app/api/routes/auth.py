@@ -10,7 +10,7 @@ import httpx
 import structlog
 from fastapi import APIRouter, Depends, Request
 
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.config import settings
 from app.core.exceptions import AuthError, ErrorCode
@@ -407,3 +407,69 @@ async def callback(
 
     logger.info("oauth_completed", shop=shop, merchant_id=merchant["id"])
     return RedirectResponse(redirect_url)
+
+
+@router.get("/me")
+async def me(request: Request):
+    """Return the merchant record for the current JWT.
+
+    The JWTAuthMiddleware has already validated the bearer token and set
+    request.state.merchant_id / request.state.auth_email. We look up the
+    merchant row and its stores. Returns 404 if the authenticated user
+    has no merchant profile (e.g. signed up via email but never ran the
+    Shopify install).
+    """
+    merchant_id = getattr(request.state, "merchant_id", None)
+    auth_email = getattr(request.state, "auth_email", None)
+
+    if not merchant_id:
+        raise AuthError(
+            code=ErrorCode.JWT_INVALID,
+            message="Missing or invalid Authorization header",
+            status_code=401,
+        )
+
+    supabase = get_supabase_service()
+    result = (
+        supabase.table("merchants")
+        .select(
+            "id,email,plan,onboarding_completed,shopify_shop_domain,"
+            "shopify_installed_at,stripe_customer_id"
+        )
+        .eq("id", merchant_id)
+        .limit(1)
+        .execute()
+    )
+
+    merchant = result.data[0] if result and result.data else None
+
+    if not merchant:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": {
+                    "code": ErrorCode.MERCHANT_NOT_FOUND.value,
+                    "message": "No merchant profile for this user",
+                    "email": auth_email,
+                }
+            },
+        )
+
+    stores_res = (
+        supabase.table("stores")
+        .select("id,shopify_shop_domain,name,status,primary_domain")
+        .eq("merchant_id", merchant["id"])
+        .execute()
+    )
+    stores = stores_res.data if stores_res and stores_res.data else []
+
+    return {
+        "id": merchant["id"],
+        "email": merchant["email"],
+        "plan": merchant.get("plan", "free"),
+        "onboarding_completed": bool(merchant.get("onboarding_completed")),
+        "shopify_shop_domain": merchant.get("shopify_shop_domain"),
+        "shopify_installed_at": merchant.get("shopify_installed_at"),
+        "has_stripe_customer": bool(merchant.get("stripe_customer_id")),
+        "stores": stores,
+    }

@@ -284,6 +284,11 @@ class ApiClient {
       this.fetchWithAuth(`/api/v1/stores/${storeId}/reports/latest`),
   };
 
+  // ────────────── Auth ──────────────
+  auth = {
+    me: (): Promise<AuthMeResponse> => this.fetchWithAuth(`/api/v1/auth/me`),
+  };
+
   // ────────────── Admin (altidigitech@gmail.com only) ──────────────
   admin = {
     overview: (): Promise<AdminOverview> =>
@@ -297,6 +302,25 @@ class ApiClient {
     analytics: (): Promise<AdminAnalytics> =>
       this.fetchWithAuth(`/api/v1/admin/analytics`),
   };
+}
+
+export interface AuthMeStore {
+  id: string;
+  shopify_shop_domain: string;
+  name: string | null;
+  status: string;
+  primary_domain: string | null;
+}
+
+export interface AuthMeResponse {
+  id: string;
+  email: string;
+  plan: Plan;
+  onboarding_completed: boolean;
+  shopify_shop_domain: string | null;
+  shopify_installed_at: string | null;
+  has_stripe_customer: boolean;
+  stores: AuthMeStore[];
 }
 
 export interface AdminOverview {
