@@ -21,33 +21,33 @@ interface Pain {
 const PAINS: Pain[] = [
   {
     Icon: Gauge,
-    title: "Slow page load",
-    body: "Every second costs you 7% in conversions. Most stores don't know their real speed.",
-  },
-  {
-    Icon: Bug,
-    title: "Ghost code",
-    body: "Uninstalled apps leave scripts that slow your store down — for months.",
-  },
-  {
-    Icon: AlertTriangle,
-    title: "Broken tracking",
-    body: "Your Meta Pixel fires 3 times. GA4 is missing on checkout. You're flying blind.",
+    title: "5 apps = 5 scripts",
+    body: "Every app loads JavaScript on every page. Five audit apps means five performance hits — on the very thing they're supposed to measure.",
   },
   {
     Icon: TrendingDown,
-    title: "Poor listings",
-    body: "Products that Google and ChatGPT can't understand don't sell.",
+    title: "$140/mo on duplicates",
+    body: "SEO app + speed app + audit app + accessibility app + link checker. Each $20–40/mo. Combined: your margin.",
+  },
+  {
+    Icon: AlertTriangle,
+    title: "5 dashboards, zero overview",
+    body: "You open one app for SEO, another for speed, a third for accessibility. Nothing tells you what actually matters most right now.",
+  },
+  {
+    Icon: Bug,
+    title: "Ghost code from uninstalls",
+    body: "Deleted an app last year? Its scripts are still running. Every old audit app leaves residue that slows your store for months.",
   },
   {
     Icon: Lock,
-    title: "Security gaps",
-    body: "Missing headers, weak scopes, exposed secrets — your customers' browsers can see them.",
+    title: "5 security surfaces",
+    body: "Each app wants access to orders, products, customers. More apps equals more scopes, more risk, more breach points.",
   },
   {
     Icon: Mail,
-    title: "Email in spam",
-    body: "No SPF. No DKIM. Your order confirmations never arrive in inboxes.",
+    title: "5 support tickets to chase",
+    body: "When something breaks, good luck finding which of your 23 apps caused it — or which support team to email first.",
   },
 ];
 
@@ -101,11 +101,10 @@ export function PainPoints() {
             transition={{ duration: 0.5 }}
             className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
-            What&apos;s silently killing your revenue?
+            Your Shopify stack is <span className="text-gradient-cyan">bleeding you dry.</span>
           </motion.h2>
           <p className="mt-4 text-base text-slate-400">
-            Six problems every Shopify store has. Most merchants discover them
-            too late.
+            The average Shopify store runs 23 apps. Most are redundant. All slow your site. All bill you monthly.
           </p>
         </div>
 

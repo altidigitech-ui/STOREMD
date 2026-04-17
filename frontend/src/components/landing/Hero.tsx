@@ -30,7 +30,7 @@ export function Hero({ installHref }: HeroProps) {
             className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-slate-200 backdrop-blur"
           >
             <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
-            Built for Shopify · SOC-style data handling
+            1 app · Replaces 5 · Shopify-verified
           </motion.div>
 
           <motion.h1
@@ -39,9 +39,9 @@ export function Hero({ installHref }: HeroProps) {
             transition={{ duration: 0.6, delay: 0.08 }}
             className="mt-6 font-display text-5xl font-bold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl"
           >
-            Your store is losing money.
+            Uninstall 5 apps.
             <br />
-            <span className="text-gradient-cyan">Find out how much.</span>
+            <span className="text-gradient-cyan">Install StoreMD.</span>
           </motion.h1>
 
           <motion.p
@@ -50,8 +50,8 @@ export function Hero({ installHref }: HeroProps) {
             transition={{ duration: 0.6, delay: 0.18 }}
             className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-400 lg:mx-0"
           >
-            StoreMD scans your entire Shopify store in 60 seconds. Speed, apps,
-            SEO, security — one dashboard, zero guesswork.
+            One app replaces Analyzify, SEO King, PageSpeed, Accessibly & broken
+            link checkers. Save $140/mo. One dashboard. One script. Faster store.
           </motion.p>
 
           <motion.div
@@ -69,15 +69,15 @@ export function Hero({ installHref }: HeroProps) {
                 className="absolute inset-0 -z-10 rounded-xl bg-cyan-400 opacity-60 blur-xl"
                 aria-hidden
               />
-              Get your free health score
+              See what you can uninstall
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </InstallLink>
             <p className="flex items-center gap-2 text-sm text-slate-500">
               <span>Free plan</span>
               <span className="text-slate-700">·</span>
-              <span>No credit card</span>
+              <span>Free config migration</span>
               <span className="text-slate-700">·</span>
-              <span>60-second scan</span>
+              <span>14-day Pro trial</span>
             </p>
           </motion.div>
         </div>

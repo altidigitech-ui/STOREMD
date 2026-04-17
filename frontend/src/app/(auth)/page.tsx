@@ -13,17 +13,16 @@ import { Footer } from "@/components/landing/Footer";
 
 export const metadata = {
   title:
-    "StoreMD — Find out how much your Shopify store is losing. Free audit in 60s.",
+    "StoreMD — One Shopify app replaces 5. Save $140/mo. Faster store.",
   description:
-    "StoreMD scans your Shopify store in 60 seconds — slow apps, broken tracking, ghost charges, AI readiness. Free plan available. No credit card required.",
+    "StoreMD replaces Analyzify, SEO King, PageSpeed, Accessibly & broken link checkers. One dashboard, one script, one bill. Free audit in 60s.",
   alternates: {
     canonical: "https://storemd.vercel.app",
   },
   openGraph: {
-    title:
-      "StoreMD — Your Shopify store is losing money. Find out how much.",
+    title: "StoreMD — Uninstall 5 Shopify apps. Install one.",
     description:
-      "StoreMD scans your Shopify store in 60 seconds — speed, apps, SEO, security. Free plan available.",
+      "Replace your SEO, speed, audit, accessibility & link checker apps with one. Save $140/mo. Load 1s faster.",
     url: "https://storemd.vercel.app",
     siteName: "StoreMD",
     type: "website",
@@ -37,9 +36,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "StoreMD — Your Shopify store is losing money.",
+    title: "StoreMD — Uninstall 5 apps. Install one.",
     description:
-      "Free health score in 60 seconds. Speed, apps, SEO, security.",
+      "One Shopify app replaces Analyzify, SEO King, PageSpeed, Accessibly & more. Save $140/mo.",
     images: ["https://storemd.vercel.app/og-image.png"],
   },
 };

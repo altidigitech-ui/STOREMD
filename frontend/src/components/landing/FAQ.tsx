@@ -7,6 +7,22 @@ import { cn } from "@/lib/utils";
 
 const FAQS = [
   {
+    q: "Which apps does StoreMD actually replace?",
+    a: "Most commonly: Analyzify, SEO King, Booster SEO, Avada SEO Suite, Tapita, PageSpeed Optimizer, Accessibly, UserWay, and Broken Link Checker. If you have a specific app in mind, email us — we likely already replace it.",
+  },
+  {
+    q: "Do I really save $140/mo?",
+    a: "Depends on your current stack. Run our free audit — we detect your installed apps and show you the exact number. Most stores save $80–200/mo.",
+  },
+  {
+    q: "Will I lose my SEO data or settings if I switch?",
+    a: "No. When you install Pro or Agency, we import configs from your previous apps (meta titles, alt text rules, redirects, etc.) so you start where you left off. Free migration is included.",
+  },
+  {
+    q: "Is StoreMD really as good as a dedicated SEO app?",
+    a: "For 95% of merchants, yes — we match or exceed core features. If you need deep keyword research or complex international hreflang, keep your specialist and use StoreMD for everything else (you'd still save 4 apps).",
+  },
+  {
     q: "How long does a scan take?",
     a: "About 60 seconds for the first scan. Daily scans run at 3 AM and don't interrupt anything.",
   },

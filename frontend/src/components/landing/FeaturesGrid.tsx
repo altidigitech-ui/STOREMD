@@ -22,33 +22,33 @@ const FEATURES: Feature[] = [
   {
     Icon: Activity,
     title: "Speed Analysis",
-    body: "Mobile & desktop Lighthouse scores with day-over-day trend tracking.",
+    body: "Mobile & desktop Core Web Vitals with day-over-day trend tracking. Replaces PageSpeed Optimizer, SpeedBoost, and similar.",
   },
   {
     Icon: Layers,
-    title: "App Impact",
-    body: "See exactly which apps add load time — and how much — to every page of your store.",
+    title: "App Impact Analyzer",
+    body: "See exactly which apps add load time and by how much. The app that tells you which other apps to uninstall.",
     span: "wide",
   },
   {
     Icon: BarChart3,
-    title: "Listing Optimizer",
-    body: "SEO score per product with concrete fix suggestions for title, description, and tags.",
+    title: "SEO & Listings Optimizer",
+    body: "Per-product SEO score, metadata, alt text, schema. Replaces Analyzify, SEO King, Booster SEO, Tapita.",
   },
   {
     Icon: Shield,
-    title: "Security Monitor",
-    body: "SSL, security headers, permission scopes, third-party apps — all verified.",
+    title: "Accessibility & Compliance",
+    body: "WCAG 2.1 AA + EU EAA deadline. Replaces Accessibly, UserWay, accessiBe — at a fraction of the price.",
   },
   {
     Icon: Eye,
-    title: "Ghost Detection",
-    body: "Find charges and code from apps you already removed — before they cost you more.",
+    title: "AI Commerce Readiness",
+    body: "ChatGPT Shopping, Copilot, Gemini compatibility. GTIN, HS codes, metafields. No other Shopify app does this yet.",
   },
   {
     Icon: Mail,
-    title: "Email Health",
-    body: "SPF, DKIM, DMARC verification so your emails land in inboxes, not spam folders.",
+    title: "Broken Links & Ghost Code",
+    body: "Dead product links, 404s, residue from uninstalled apps. Replaces Broken Link Checker and similar crawlers.",
   },
 ];
 
@@ -63,12 +63,12 @@ export function FeaturesGrid() {
             transition={{ duration: 0.5 }}
             className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
-            Everything your store needs.
+            Everything those 5 apps did.
             <br />
-            <span className="text-gradient-cyan">Nothing it doesn&apos;t.</span>
+            <span className="text-gradient-cyan">Better. And together.</span>
           </motion.h2>
           <p className="mt-4 text-base text-slate-400">
-            One focused app replacing five bloated ones.
+            Not a compromise bundle. Each module matches or beats its specialist competitor.
           </p>
         </div>
 

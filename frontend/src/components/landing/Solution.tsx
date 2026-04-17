@@ -6,16 +6,16 @@ import { DashboardMockup } from "./DashboardMockup";
 
 const BULLETS = [
   {
-    title: "AI-powered analysis across 12 health dimensions",
-    body: "Speed, apps, SEO, security, email, accessibility — scanned in one pass.",
+    title: "Replace 5 apps with 1 — save $140/mo on average",
+    body: "SEO audit, speed monitoring, health scoring, accessibility, broken links. All in Pro at $99/mo instead of $140+/mo spread across five specialists.",
   },
   {
-    title: "Issues ranked by revenue impact, not just severity",
-    body: "We tell you what's costing you money today, not what some audit score says.",
+    title: "One script, not five — measurable speed gains",
+    body: "Stores that switch to StoreMD typically see 0.8–1.5s faster page loads just from removing redundant audit app scripts.",
   },
   {
-    title: "One-click fix suggestions for every problem found",
-    body: "Clear, actionable steps. Most fixes require zero developer time.",
+    title: "We migrate your configs for you",
+    body: "Install StoreMD, tell us what you're replacing, we import your settings. No data loss. No downtime. No developer needed.",
   },
 ];
 
@@ -34,8 +34,8 @@ export function Solution() {
             transition={{ duration: 0.5 }}
             className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
-            One scan. Every problem.{" "}
-            <span className="text-gradient-cyan">Clear fixes.</span>
+            One app. Five replaced.{" "}
+            <span className="text-gradient-cyan">Zero bloat.</span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -43,8 +43,7 @@ export function Solution() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mt-4 text-lg text-slate-400"
           >
-            StoreMD doesn&apos;t just audit your store. It diagnoses it like a
-            doctor — and writes the prescription.
+            StoreMD does what Analyzify, SEO King, PageSpeed Optimizer, Accessibly and Broken Link Checker do — in one app, with one dashboard, on one bill.
           </motion.p>
 
           <ul className="mt-10 space-y-6">
