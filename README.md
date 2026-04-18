@@ -1,4 +1,8 @@
-# StoreMD
+<p align="center">
+  <img src="./frontend/public/icons/icon-192x192.png" alt="StoreMD logo" width="120" height="120" />
+</p>
+
+<h1 align="center">StoreMD</h1>
 
 **AI agent that monitors Shopify store health 24/7.**
 

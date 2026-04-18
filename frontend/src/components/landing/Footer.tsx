@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const COLUMNS = [
   {
@@ -39,9 +40,13 @@ export function Footer() {
               href="/"
               className="inline-flex items-center gap-2 font-display text-lg font-bold text-white"
             >
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-teal-500 text-black">
-                S
-              </span>
+              <Image
+                src="/icons/icon-192x192.png"
+                alt="StoreMD"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-lg"
+              />
               StoreMD
             </Link>
             <p className="mt-4 max-w-xs text-sm text-slate-500">

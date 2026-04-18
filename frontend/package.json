@@ -9,7 +9,9 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:logo": "node scripts/generate-logo-assets.mjs",
+    "generate:og": "node scripts/generate-og-image.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
@@ -36,6 +38,7 @@
     "eslint-config-next": "14.2.15",
     "jsdom": "^25.0.1",
     "postcss": "^8.4.47",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.13",
     "typescript": "^5.6.2",
     "vitest": "^2.1.2"
