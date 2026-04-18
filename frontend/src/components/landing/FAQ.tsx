@@ -7,44 +7,44 @@ import { cn } from "@/lib/utils";
 
 const FAQS = [
   {
-    q: "How is this different from other SEO/audit apps?",
-    a: "Other apps read your store's metadata and send you a report. We actually use your store — we run a real browser every night, click through your checkout, measure load times on a real phone, and fix the problems we find. You wake up to results, not homework.",
+    q: "Which apps does StoreMD actually replace?",
+    a: "Most commonly: Booster SEO, SEO King, Smart SEO, Tapita, SearchPie, PageSpeed Optimizer, TinyIMG (SEO features), Accessibly, UserWay, accessiBe, Plug In SEO, broken link checkers, and LLMs.txt / AEO apps. If you have a specific app in mind, email us — we probably already replace it.",
   },
   {
-    q: "What does 'fixing it overnight' actually mean?",
-    a: "Every night at 3 AM, our AI agent scans your store, detects issues (slow pages, broken links, bad schema, checkout bugs, accessibility fails, ghost scripts), and applies fixes via the Shopify API. You get a morning summary: '12 issues fixed, +$2,400 protected this month.' That's it.",
+    q: "How is StoreMD different from the SEO/audit apps I already use?",
+    a: "Other apps read your metadata and send you a PDF. We actually use your store — real browser, real clicks, real checkout flow, real slow-network testing. And we don't stop at finding issues: we ship the fixes automatically. You wake up to results, not homework.",
   },
   {
-    q: "Do I really save money switching from 5 apps?",
-    a: "Run our free audit — it detects your installed apps and tells you exactly what you'd save. Typical merchant: 5 apps at $150/month combined. StoreMD Pro: $99/month. Saves $612/year, plus your store runs faster because one script replaces five.",
+    q: "Do I really save $600/year switching?",
+    a: "Depends on your current stack. Run our free audit — we detect your installed apps and show you the exact number. Typical merchant: 5 apps at $150/month combined. StoreMD Pro: $99/month. That's $612/year saved. Plus your store runs faster because one script replaces five.",
   },
   {
-    q: "Will you break my store?",
-    a: "No. Every fix is reversible with one click. We log every change, and nothing deploys to your storefront without your approval rules. Critical fixes (like schema) we ship automatically. Risky changes we queue for your review.",
+    q: "Will I lose my SEO data or settings if I switch?",
+    a: "No. When you install Pro or Agency, we import configs from your previous apps — meta titles, alt text rules, redirects, schema. You start where you left off. Free migration included.",
   },
   {
-    q: "What about SEO specialists — are you as good?",
-    a: "For 95% of merchants, yes. If you need deep keyword research or multi-country hreflang complexity, keep your specialist. StoreMD handles everything else (speed, technical SEO, broken links, schema, accessibility, AI readiness), so you still save 4 apps.",
+    q: "Is StoreMD really as good as a dedicated SEO app?",
+    a: "For 95% of merchants, yes — we match or exceed core features. If you need deep keyword research or multi-country hreflang complexity, keep your specialist and use StoreMD for everything else (you'd still save 4 apps).",
+  },
+  {
+    q: "Will StoreMD break my store?",
+    a: "No. Every fix is reversible with one click. We log every change. Risky changes queue for your review — nothing touches your storefront without approval rules you control. We also never inject scripts; we only apply fixes via the Shopify API.",
   },
   {
     q: "How long does a scan take?",
-    a: "First scan: ~60 seconds. Nightly scans run at 3 AM in your store's timezone and never interrupt traffic.",
+    a: "First scan: ~60 seconds. Scheduled scans run in the background and never interrupt traffic.",
   },
   {
     q: "Will StoreMD slow down my store?",
-    a: "The opposite. We don't inject scripts — we only remove bloat and apply fixes via the Shopify API. Most stores get 0.8–1.5s faster within a week.",
+    a: "The opposite. We don't inject scripts into your theme. We apply fixes via the Shopify API. Most stores get 0.8–1.5s faster within the first week after removing redundant audit apps.",
   },
   {
     q: "What happens if I uninstall?",
-    a: "Subscription ends immediately. All changes we made can be reverted with one click. Your data is deleted within 30 days.",
-  },
-  {
-    q: "Is my data safe?",
-    a: "Your Shopify access token is encrypted. Your data is isolated with Postgres RLS. GDPR-compliant and Shopify data-protection compliant.",
+    a: "Subscription ends immediately. All changes are reversible in one click. Your data is deleted within 30 days.",
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yes. One click in Settings or through your Shopify admin. No fees.",
+    a: "Yes. One click in Settings or through Shopify. No fees. No questions.",
   },
 ];
 

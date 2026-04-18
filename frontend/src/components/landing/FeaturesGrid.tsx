@@ -4,9 +4,9 @@ import { motion } from "framer-motion";
 import {
   Activity,
   BarChart3,
+  Bug,
   Eye,
   Layers,
-  Mail,
   Shield,
   type LucideIcon,
 } from "lucide-react";
@@ -20,35 +20,35 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   {
-    Icon: Activity,
-    title: "Real customer simulation",
-    body: "We run Playwright every night — real browser, real clicks, real checkout flow. If your customer can't buy, we know before they do.",
+    Icon: BarChart3,
+    title: "Kills your SEO app",
+    body: "Meta tags, alt text, schema, sitemap, keyword optimization, broken link auto-redirects. Does everything Booster SEO, SEO King, Smart SEO, or Tapita do — and actually ships the fixes.",
   },
   {
-    Icon: Layers,
-    title: "App bloat detection",
-    body: "We find which of your 23 apps are slowing your store, which left ghost code behind, and which ones you can delete today without losing anything.",
+    Icon: Activity,
+    title: "Kills your speed app",
+    body: "Core Web Vitals, image compression, lazy load, ghost script detection. Replaces PageSpeed Optimizer, TinyIMG, and similar — without adding yet another script to your theme.",
     span: "wide",
   },
   {
-    Icon: BarChart3,
-    title: "SEO that ships, not reports",
-    body: "Meta tags, alt text, schema, broken links, bad URLs. We fix them. You don't read a PDF. You see the ranking go up.",
+    Icon: Shield,
+    title: "Kills your accessibility app",
+    body: "WCAG 2.1 AA + EU Accessibility Act (EAA) compliance. Fines start at €10,000 per violation. Replaces Accessibly, UserWay, accessiBe — fraction of the price.",
   },
   {
-    Icon: Shield,
-    title: "Accessibility before you get sued",
-    body: "EU Accessibility Act is live. Fines start at €10,000. We make your store compliant overnight. Replaces Accessibly, UserWay, accessiBe.",
+    Icon: Bug,
+    title: "Kills your audit tool",
+    body: "Full health score across 20 dimensions. Prioritized by revenue impact, not severity. Replaces Plug In SEO, SearchPie audits. We don't rank issues — we rank them by how much money they cost you.",
   },
   {
     Icon: Eye,
-    title: "AI commerce ready — without thinking",
-    body: "ChatGPT Shopping, Gemini, Copilot. GTIN, schema, LLMs.txt. We set it all up so AI agents recommend your products when customers ask.",
+    title: "AI commerce — already built in",
+    body: "ChatGPT Shopping, Gemini, Copilot, Perplexity. LLMs.txt, GTIN, HS codes, structured data. No separate AEO app needed. The next $2,400 in sales will come from AI search. Be ready.",
   },
   {
-    Icon: Mail,
-    title: "Memory that compounds",
-    body: "Month 1, we learn your store. Month 6, we know what breaks on Black Friday before it happens. The only audit tool that gets smarter.",
+    Icon: Layers,
+    title: "The one thing nobody else does",
+    body: "Real browser simulation every day. Our agent clicks through your store like a real customer, from a real phone, on real slow networks. Catches bugs before your buyers do. No competitor has this.",
   },
 ];
 
@@ -63,12 +63,12 @@ export function FeaturesGrid() {
             transition={{ duration: 0.5 }}
             className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
-            What actually happens
+            Why we crush
             <br />
-            <span className="text-gradient-cyan">while you sleep.</span>
+            <span className="text-gradient-cyan">the 5 apps we replace.</span>
           </motion.h2>
           <p className="mt-4 text-base text-slate-400">
-            Not a feature list. A list of problems that die overnight.
+            Not a compromise bundle. We beat the specialists at their own game — because we do what they refuse to do.
           </p>
         </div>
 

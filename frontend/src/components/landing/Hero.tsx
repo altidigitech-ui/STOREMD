@@ -30,7 +30,7 @@ export function Hero({ installHref }: HeroProps) {
             className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-slate-200 backdrop-blur"
           >
             <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
-            Your store is losing $2,400/month. You have no idea.
+            Your 5 audit apps cost $150/mo. They fix nothing.
           </motion.div>
 
           <motion.h1
@@ -39,9 +39,9 @@ export function Hero({ installHref }: HeroProps) {
             transition={{ duration: 0.6, delay: 0.08 }}
             className="mt-6 font-display text-5xl font-bold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl"
           >
-            While you sleep,
+            One app. Five killed.
             <br />
-            <span className="text-gradient-cyan">your store fixes itself.</span>
+            <span className="text-gradient-cyan">Zero regrets.</span>
           </motion.h1>
 
           <motion.p
@@ -50,10 +50,10 @@ export function Hero({ installHref }: HeroProps) {
             transition={{ duration: 0.6, delay: 0.18 }}
             className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-400 lg:mx-0"
           >
-            Every second of load time costs you 7% of sales. Every broken link
-            kills a customer. Every checkout bug kills a cart. Other apps hand
-            you a 40-page report. We fix the problem overnight. You wake up. You
-            made money.
+            SEO, speed, accessibility, broken links, audits. You&apos;re paying
+            5 Shopify apps to send you PDFs you never read. StoreMD replaces all
+            5 with one AI agent that actually fixes what&apos;s broken. Save
+            $600/year. Faster store. No more homework.
           </motion.p>
 
           <motion.div
@@ -71,7 +71,7 @@ export function Hero({ installHref }: HeroProps) {
                 className="absolute inset-0 -z-10 rounded-xl bg-cyan-400 opacity-60 blur-xl"
                 aria-hidden
               />
-              Install tonight. Wake up richer.
+              Show me what I can uninstall
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </InstallLink>
             <p className="flex items-center gap-2 text-sm text-slate-500">
@@ -79,7 +79,7 @@ export function Hero({ installHref }: HeroProps) {
               <span className="text-slate-700">·</span>
               <span>No credit card</span>
               <span className="text-slate-700">·</span>
-              <span>Fixes applied overnight</span>
+              <span>Free migration from your current apps</span>
             </p>
           </motion.div>
         </div>

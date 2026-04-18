@@ -4,8 +4,8 @@ import { motion } from "framer-motion";
 import {
   AlertTriangle,
   Bug,
+  Eye,
   Gauge,
-  Lock,
   Mail,
   TrendingDown,
   type LucideIcon,
@@ -20,34 +20,34 @@ interface Pain {
 
 const PAINS: Pain[] = [
   {
-    Icon: Gauge,
-    title: "Your site is slow. You just don't feel it.",
-    body: "Your phone has fast Wi-Fi. Your customer's phone doesn't. If your store takes 4 seconds to load on a 4G network, 40% of visitors just left. You never saw them.",
-  },
-  {
     Icon: TrendingDown,
     title: "$150/month on apps you never open",
-    body: "SEO app. Speed app. Audit app. Accessibility app. Link checker. Each one sends you a report. You never read it. You keep paying. That's $1,800/year for nothing.",
+    body: "SEO app, speed app, accessibility app, audit app, link checker. Each sends a report. You never read it. $1,800/year gone. For nothing.",
+  },
+  {
+    Icon: Gauge,
+    title: "5 apps = 5 scripts = slow store",
+    body: "Every audit app loads JavaScript on every page. Five audit apps slowing the store they're supposed to audit. The irony is expensive.",
   },
   {
     Icon: AlertTriangle,
-    title: "Your checkout has a bug. You don't know which one.",
-    body: "Somewhere between 'Add to Cart' and 'Pay', something breaks. A button, a form field, a shipping rate. You only notice when sales drop. By then, you've lost weeks.",
+    title: "Reports you never read. Fixes you never ship.",
+    body: "\"80 issues found.\" You fix 2. You feel guilty. You renew the subscription. Next month: same report. Same 2 fixes. Same guilt.",
   },
   {
     Icon: Bug,
-    title: "Ghost code from apps you deleted a year ago",
-    body: "You uninstalled an app. Its scripts are still on your store. Slowing every page. For months. Every audit app you've ever tried left residue.",
+    title: "Ghost code from apps you deleted last year",
+    body: "Uninstalled ≠ gone. Old scripts keep running. Performance stays tanked. Nobody tells you. You just see conversions drop.",
   },
   {
-    Icon: Lock,
-    title: "Broken links you'll never find manually",
-    body: "A supplier discontinued a product. Your old blog post still links to it. Google sees a 404. Your ranking drops. You had no way to know.",
+    Icon: Eye,
+    title: "Broken checkout, silent bug",
+    body: "A button, a field, a shipping rate stops working. You only notice when Monday's sales are flat. By then you lost a week. Good luck finding which app caused it.",
   },
   {
     Icon: Mail,
-    title: "Reports you never read, fixes you never ship",
-    body: "Your SEO app says 80 things to fix. You fix 2. You feel guilty. You renew the subscription. Next month, same report. Same 2 fixes. Same guilt.",
+    title: "5 dashboards. Zero overview.",
+    body: "You open one app for SEO, another for speed, a third for accessibility. Nothing tells you what matters most right now. You fix what's loud, not what costs you money.",
   },
 ];
 
@@ -101,10 +101,10 @@ export function PainPoints() {
             transition={{ duration: 0.5 }}
             className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
-            Your store bleeds money <span className="text-gradient-cyan">every single night.</span>
+            You don&apos;t have a Shopify problem. <span className="text-gradient-cyan">You have an app problem.</span>
           </motion.h2>
           <p className="mt-4 text-base text-slate-400">
-            You don&apos;t see it. Your apps don&apos;t fix it. Your customers leave. Here&apos;s what&apos;s happening right now, while you&apos;re reading this.
+            23 apps installed. 5 dashboards open. $150/month out. Zero things actually fixed. Sound familiar?
           </p>
         </div>
 

@@ -6,16 +6,16 @@ import { DashboardMockup } from "./DashboardMockup";
 
 const BULLETS = [
   {
-    title: "We don't read your store. We use it.",
-    body: "Other apps parse metadata. We click buttons, add to cart, go through checkout, measure real load times on real networks. The only way to find what real customers feel.",
+    title: "Reports don't pay rent. We do.",
+    body: "Other apps hand you a PDF. We hand you a fixed store. Broken links redirected, schema deployed, alt text written, ghost code removed, slow images compressed. Done — not documented.",
   },
   {
-    title: "No reports. No to-do lists. No guilt.",
-    body: "You wake up to one message: '12 issues fixed tonight. +$2,400 in sales protected this month.' That's it. No PDF. No homework. No feeling like a bad founder.",
+    title: "One script instead of five. Measurable speed.",
+    body: "Every app you uninstall = one less JavaScript load on every page. Stores that migrate to StoreMD typically gain 0.8–1.5s on page speed within a week. That's 5–10% more conversions, free.",
   },
   {
-    title: "Replace 5 apps. Keep one. Save $600/year.",
-    body: "SEO, speed, accessibility, broken links, audits. Five subscriptions, five scripts slowing your store, five dashboards you never open. StoreMD does all of it for $99/month.",
+    title: "The only agent that actually uses your store.",
+    body: "We don't parse metadata from the outside. We open your store in a real browser, click your buttons, add to cart, complete checkout on a real slow 4G phone. If your customer can't buy, we know before they do.",
   },
 ];
 
@@ -34,7 +34,7 @@ export function Solution() {
             transition={{ duration: 0.5 }}
             className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
-            You sleep. <span className="text-gradient-cyan">We fix.</span>
+            The audit era is over. <span className="text-gradient-cyan">Meet your new agent.</span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -42,7 +42,7 @@ export function Solution() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mt-4 text-lg text-slate-400"
           >
-            Every night at 3 AM, StoreMD goes on your store like a real customer. Clicks every button. Tries the checkout. Loads pages from a slow phone. Whatever breaks — we fix it. You wake up to a shorter list and a faster store.
+            StoreMD does what your 5 apps do — better, cheaper, and actually finishes the job. One dashboard. One bill. One script. One agent that doesn&apos;t just find problems, it fixes them.
           </motion.p>
 
           <ul className="mt-10 space-y-6">

@@ -13,16 +13,16 @@ import { Footer } from "@/components/landing/Footer";
 
 export const metadata = {
   title:
-    "StoreMD — While you sleep, your store fixes itself.",
+    "StoreMD — One app. Five killed. Zero regrets.",
   description:
-    "Other apps give you reports. StoreMD fixes the problem. An AI agent tests your store every night, finds what's losing you sales, and fixes it before you wake up.",
+    "Stop paying 5 Shopify apps $150/month to send you reports you never read. StoreMD replaces your SEO, speed, accessibility, broken link and audit apps with one AI agent that actually fixes problems.",
   alternates: {
     canonical: "https://storemd.vercel.app",
   },
   openGraph: {
-    title: "StoreMD — Your store is losing $2,400/month. You have no idea.",
+    title: "StoreMD — One app. Five killed. Zero regrets.",
     description:
-      "An AI agent that fixes your Shopify store while you sleep. Stop paying for 5 audit apps that do nothing. Start waking up to a store that made you more money overnight.",
+      "The only Shopify app that uninstalls the others. Replace 5 apps with one agent that actually fixes what's broken. Save $600/year. Faster store. No more PDFs.",
     url: "https://storemd.vercel.app",
     siteName: "StoreMD",
     type: "website",
@@ -36,9 +36,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "StoreMD — While you sleep, your store fixes itself.",
+    title: "StoreMD — One app. Five killed. Zero regrets.",
     description:
-      "The AI agent that actually uses your Shopify store at night and fixes what's losing you sales.",
+      "The only Shopify app that uninstalls the others. Replace 5 with one agent that actually fixes what's broken.",
     images: ["https://storemd.vercel.app/og-image.png"],
   },
 };
@@ -56,8 +56,8 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-6 text-center">
           <h2 className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
             1 agent.{" "}
-            <span className="text-gradient-cyan">5 apps replaced.</span>{" "}
-            $600/year saved.
+            <span className="text-gradient-cyan">5 apps killed.</span>{" "}
+            0 bullshit.
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base text-slate-400 sm:text-lg">
             SEO app. Speed app. Accessibility app. Broken link checker. Audit tool.
