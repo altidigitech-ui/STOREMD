@@ -13,16 +13,16 @@ import { Footer } from "@/components/landing/Footer";
 
 export const metadata = {
   title:
-    "StoreMD — One Shopify app replaces 5. Save $140/mo. Faster store.",
+    "StoreMD — While you sleep, your store fixes itself.",
   description:
-    "StoreMD replaces Analyzify, SEO King, PageSpeed, Accessibly & broken link checkers. One dashboard, one script, one bill. Free audit in 60s.",
+    "Other apps give you reports. StoreMD fixes the problem. An AI agent tests your store every night, finds what's losing you sales, and fixes it before you wake up.",
   alternates: {
     canonical: "https://storemd.vercel.app",
   },
   openGraph: {
-    title: "StoreMD — Uninstall 5 Shopify apps. Install one.",
+    title: "StoreMD — Your store is losing $2,400/month. You have no idea.",
     description:
-      "Replace your SEO, speed, audit, accessibility & link checker apps with one. Save $140/mo. Load 1s faster.",
+      "An AI agent that fixes your Shopify store while you sleep. Stop paying for 5 audit apps that do nothing. Start waking up to a store that made you more money overnight.",
     url: "https://storemd.vercel.app",
     siteName: "StoreMD",
     type: "website",
@@ -36,9 +36,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "StoreMD — Uninstall 5 apps. Install one.",
+    title: "StoreMD — While you sleep, your store fixes itself.",
     description:
-      "One Shopify app replaces Analyzify, SEO King, PageSpeed, Accessibly & more. Save $140/mo.",
+      "The AI agent that actually uses your Shopify store at night and fixes what's losing you sales.",
     images: ["https://storemd.vercel.app/og-image.png"],
   },
 };
@@ -52,6 +52,19 @@ export default function LandingPage() {
     <div className="relative min-h-screen bg-[#0a0a0f] font-sans text-slate-100 antialiased">
       <LandingNavbar installHref={installHref} />
       <Hero installHref={installHref} />
+      <section className="relative border-y border-white/5 bg-[#0a0a0f] py-14">
+        <div className="mx-auto max-w-7xl px-6 text-center">
+          <h2 className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
+            1 agent.{" "}
+            <span className="text-gradient-cyan">5 apps replaced.</span>{" "}
+            $600/year saved.
+          </h2>
+          <p className="mx-auto mt-5 max-w-2xl text-base text-slate-400 sm:text-lg">
+            SEO app. Speed app. Accessibility app. Broken link checker. Audit tool.
+            Kill them all. StoreMD does the work of 5 — for less than any one of them.
+          </p>
+        </div>
+      </section>
       <LogosBar />
       <PainPoints />
       <Solution />

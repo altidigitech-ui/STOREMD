@@ -6,16 +6,16 @@ import { DashboardMockup } from "./DashboardMockup";
 
 const BULLETS = [
   {
-    title: "Replace 5 apps with 1 — save $140/mo on average",
-    body: "SEO audit, speed monitoring, health scoring, accessibility, broken links. All in Pro at $99/mo instead of $140+/mo spread across five specialists.",
+    title: "We don't read your store. We use it.",
+    body: "Other apps parse metadata. We click buttons, add to cart, go through checkout, measure real load times on real networks. The only way to find what real customers feel.",
   },
   {
-    title: "One script, not five — measurable speed gains",
-    body: "Stores that switch to StoreMD typically see 0.8–1.5s faster page loads just from removing redundant audit app scripts.",
+    title: "No reports. No to-do lists. No guilt.",
+    body: "You wake up to one message: '12 issues fixed tonight. +$2,400 in sales protected this month.' That's it. No PDF. No homework. No feeling like a bad founder.",
   },
   {
-    title: "We migrate your configs for you",
-    body: "Install StoreMD, tell us what you're replacing, we import your settings. No data loss. No downtime. No developer needed.",
+    title: "Replace 5 apps. Keep one. Save $600/year.",
+    body: "SEO, speed, accessibility, broken links, audits. Five subscriptions, five scripts slowing your store, five dashboards you never open. StoreMD does all of it for $99/month.",
   },
 ];
 
@@ -34,8 +34,7 @@ export function Solution() {
             transition={{ duration: 0.5 }}
             className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
-            One app. Five replaced.{" "}
-            <span className="text-gradient-cyan">Zero bloat.</span>
+            You sleep. <span className="text-gradient-cyan">We fix.</span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -43,7 +42,7 @@ export function Solution() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mt-4 text-lg text-slate-400"
           >
-            StoreMD does what Analyzify, SEO King, PageSpeed Optimizer, Accessibly and Broken Link Checker do — in one app, with one dashboard, on one bill.
+            Every night at 3 AM, StoreMD goes on your store like a real customer. Clicks every button. Tries the checkout. Loads pages from a slow phone. Whatever breaks — we fix it. You wake up to a shorter list and a faster store.
           </motion.p>
 
           <ul className="mt-10 space-y-6">

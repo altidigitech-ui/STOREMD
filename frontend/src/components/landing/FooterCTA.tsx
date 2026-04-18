@@ -29,9 +29,9 @@ export function FooterCTA({ installHref }: FooterCTAProps) {
           transition={{ duration: 0.5 }}
           className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-6xl"
         >
-          Stop paying for 5 apps.
+          Install tonight.
           <br />
-          <span className="text-gradient-cyan">Start using one.</span>
+          <span className="text-gradient-cyan">Wake up richer.</span>
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -39,7 +39,7 @@ export function FooterCTA({ installHref }: FooterCTAProps) {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mx-auto mt-5 max-w-xl text-lg text-slate-300"
         >
-          Free audit shows you exactly which apps you can uninstall — and how much you&apos;d save.
+          Stores that switch to StoreMD recover $1,800/year in lost sales and save $600/year on useless apps. 14-day free trial. Zero credit card.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -52,12 +52,12 @@ export function FooterCTA({ installHref }: FooterCTAProps) {
             label="footer_cta_install"
             className="group inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-8 py-4 font-display text-base font-bold text-black shadow-glow transition-all hover:bg-cyan-400 hover:shadow-[0_0_60px_rgba(6,182,212,0.6)] focus:outline-none focus:ring-4 focus:ring-cyan-500/30"
           >
-            Run my free app-stack audit
+            Fix my store tonight
             <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
           </InstallLink>
         </motion.div>
         <p className="mt-6 text-sm text-slate-500">
-          Join 100+ merchants who uninstalled their app bloat.
+          Installed by merchants who are done reading PDFs.
         </p>
       </div>
     </section>

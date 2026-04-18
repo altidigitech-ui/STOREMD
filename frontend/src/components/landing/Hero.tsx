@@ -30,7 +30,7 @@ export function Hero({ installHref }: HeroProps) {
             className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-slate-200 backdrop-blur"
           >
             <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
-            1 app · Replaces 5 · Shopify-verified
+            Your store is losing $2,400/month. You have no idea.
           </motion.div>
 
           <motion.h1
@@ -39,9 +39,9 @@ export function Hero({ installHref }: HeroProps) {
             transition={{ duration: 0.6, delay: 0.08 }}
             className="mt-6 font-display text-5xl font-bold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl"
           >
-            Uninstall 5 apps.
+            While you sleep,
             <br />
-            <span className="text-gradient-cyan">Install StoreMD.</span>
+            <span className="text-gradient-cyan">your store fixes itself.</span>
           </motion.h1>
 
           <motion.p
@@ -50,8 +50,10 @@ export function Hero({ installHref }: HeroProps) {
             transition={{ duration: 0.6, delay: 0.18 }}
             className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-400 lg:mx-0"
           >
-            One app replaces Analyzify, SEO King, PageSpeed, Accessibly & broken
-            link checkers. Save $140/mo. One dashboard. One script. Faster store.
+            Every second of load time costs you 7% of sales. Every broken link
+            kills a customer. Every checkout bug kills a cart. Other apps hand
+            you a 40-page report. We fix the problem overnight. You wake up. You
+            made money.
           </motion.p>
 
           <motion.div
@@ -69,15 +71,15 @@ export function Hero({ installHref }: HeroProps) {
                 className="absolute inset-0 -z-10 rounded-xl bg-cyan-400 opacity-60 blur-xl"
                 aria-hidden
               />
-              See what you can uninstall
+              Install tonight. Wake up richer.
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </InstallLink>
             <p className="flex items-center gap-2 text-sm text-slate-500">
-              <span>Free plan</span>
+              <span>14-day free trial</span>
               <span className="text-slate-700">·</span>
-              <span>Free config migration</span>
+              <span>No credit card</span>
               <span className="text-slate-700">·</span>
-              <span>14-day Pro trial</span>
+              <span>Fixes applied overnight</span>
             </p>
           </motion.div>
         </div>

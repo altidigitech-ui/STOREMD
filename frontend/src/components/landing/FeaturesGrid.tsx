@@ -21,34 +21,34 @@ interface Feature {
 const FEATURES: Feature[] = [
   {
     Icon: Activity,
-    title: "Speed Analysis",
-    body: "Mobile & desktop Core Web Vitals with day-over-day trend tracking. Replaces PageSpeed Optimizer, SpeedBoost, and similar.",
+    title: "Real customer simulation",
+    body: "We run Playwright every night — real browser, real clicks, real checkout flow. If your customer can't buy, we know before they do.",
   },
   {
     Icon: Layers,
-    title: "App Impact Analyzer",
-    body: "See exactly which apps add load time and by how much. The app that tells you which other apps to uninstall.",
+    title: "App bloat detection",
+    body: "We find which of your 23 apps are slowing your store, which left ghost code behind, and which ones you can delete today without losing anything.",
     span: "wide",
   },
   {
     Icon: BarChart3,
-    title: "SEO & Listings Optimizer",
-    body: "Per-product SEO score, metadata, alt text, schema. Replaces Analyzify, SEO King, Booster SEO, Tapita.",
+    title: "SEO that ships, not reports",
+    body: "Meta tags, alt text, schema, broken links, bad URLs. We fix them. You don't read a PDF. You see the ranking go up.",
   },
   {
     Icon: Shield,
-    title: "Accessibility & Compliance",
-    body: "WCAG 2.1 AA + EU EAA deadline. Replaces Accessibly, UserWay, accessiBe — at a fraction of the price.",
+    title: "Accessibility before you get sued",
+    body: "EU Accessibility Act is live. Fines start at €10,000. We make your store compliant overnight. Replaces Accessibly, UserWay, accessiBe.",
   },
   {
     Icon: Eye,
-    title: "AI Commerce Readiness",
-    body: "ChatGPT Shopping, Copilot, Gemini compatibility. GTIN, HS codes, metafields. No other Shopify app does this yet.",
+    title: "AI commerce ready — without thinking",
+    body: "ChatGPT Shopping, Gemini, Copilot. GTIN, schema, LLMs.txt. We set it all up so AI agents recommend your products when customers ask.",
   },
   {
     Icon: Mail,
-    title: "Broken Links & Ghost Code",
-    body: "Dead product links, 404s, residue from uninstalled apps. Replaces Broken Link Checker and similar crawlers.",
+    title: "Memory that compounds",
+    body: "Month 1, we learn your store. Month 6, we know what breaks on Black Friday before it happens. The only audit tool that gets smarter.",
   },
 ];
 
@@ -63,12 +63,12 @@ export function FeaturesGrid() {
             transition={{ duration: 0.5 }}
             className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
-            Everything those 5 apps did.
+            What actually happens
             <br />
-            <span className="text-gradient-cyan">Better. And together.</span>
+            <span className="text-gradient-cyan">while you sleep.</span>
           </motion.h2>
           <p className="mt-4 text-base text-slate-400">
-            Not a compromise bundle. Each module matches or beats its specialist competitor.
+            Not a feature list. A list of problems that die overnight.
           </p>
         </div>
 

@@ -21,33 +21,33 @@ interface Pain {
 const PAINS: Pain[] = [
   {
     Icon: Gauge,
-    title: "5 apps = 5 scripts",
-    body: "Every app loads JavaScript on every page. Five audit apps means five performance hits — on the very thing they're supposed to measure.",
+    title: "Your site is slow. You just don't feel it.",
+    body: "Your phone has fast Wi-Fi. Your customer's phone doesn't. If your store takes 4 seconds to load on a 4G network, 40% of visitors just left. You never saw them.",
   },
   {
     Icon: TrendingDown,
-    title: "$140/mo on duplicates",
-    body: "SEO app + speed app + audit app + accessibility app + link checker. Each $20–40/mo. Combined: your margin.",
+    title: "$150/month on apps you never open",
+    body: "SEO app. Speed app. Audit app. Accessibility app. Link checker. Each one sends you a report. You never read it. You keep paying. That's $1,800/year for nothing.",
   },
   {
     Icon: AlertTriangle,
-    title: "5 dashboards, zero overview",
-    body: "You open one app for SEO, another for speed, a third for accessibility. Nothing tells you what actually matters most right now.",
+    title: "Your checkout has a bug. You don't know which one.",
+    body: "Somewhere between 'Add to Cart' and 'Pay', something breaks. A button, a form field, a shipping rate. You only notice when sales drop. By then, you've lost weeks.",
   },
   {
     Icon: Bug,
-    title: "Ghost code from uninstalls",
-    body: "Deleted an app last year? Its scripts are still running. Every old audit app leaves residue that slows your store for months.",
+    title: "Ghost code from apps you deleted a year ago",
+    body: "You uninstalled an app. Its scripts are still on your store. Slowing every page. For months. Every audit app you've ever tried left residue.",
   },
   {
     Icon: Lock,
-    title: "5 security surfaces",
-    body: "Each app wants access to orders, products, customers. More apps equals more scopes, more risk, more breach points.",
+    title: "Broken links you'll never find manually",
+    body: "A supplier discontinued a product. Your old blog post still links to it. Google sees a 404. Your ranking drops. You had no way to know.",
   },
   {
     Icon: Mail,
-    title: "5 support tickets to chase",
-    body: "When something breaks, good luck finding which of your 23 apps caused it — or which support team to email first.",
+    title: "Reports you never read, fixes you never ship",
+    body: "Your SEO app says 80 things to fix. You fix 2. You feel guilty. You renew the subscription. Next month, same report. Same 2 fixes. Same guilt.",
   },
 ];
 
@@ -101,10 +101,10 @@ export function PainPoints() {
             transition={{ duration: 0.5 }}
             className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
-            Your Shopify stack is <span className="text-gradient-cyan">bleeding you dry.</span>
+            Your store bleeds money <span className="text-gradient-cyan">every single night.</span>
           </motion.h2>
           <p className="mt-4 text-base text-slate-400">
-            The average Shopify store runs 23 apps. Most are redundant. All slow your site. All bill you monthly.
+            You don&apos;t see it. Your apps don&apos;t fix it. Your customers leave. Here&apos;s what&apos;s happening right now, while you&apos;re reading this.
           </p>
         </div>
 
