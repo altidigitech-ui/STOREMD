@@ -39,7 +39,7 @@ export function FooterCTA({ installHref }: FooterCTAProps) {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mx-auto mt-5 max-w-xl text-lg text-slate-300"
         >
-          Free audit detects your installed apps and shows you exactly what you&apos;ll save. Most stores recover $1,800/year in lost sales + $600/year on useless apps. Install once. Sleep better. Sell more.
+          Free audit detects your installed apps and shows you exactly what you&apos;ll save. Most stores recover $1,800/year in lost sales + $852/year on useless apps. Install once. Sleep better. Sell more.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 20 }}

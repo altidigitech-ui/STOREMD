@@ -53,7 +53,7 @@ export function Hero({ installHref }: HeroProps) {
             SEO, speed, accessibility, broken links, audits. You&apos;re paying
             5 Shopify apps to send you PDFs you never read. StoreMD replaces all
             5 with one AI agent that actually fixes what&apos;s broken. Save
-            $600/year. Faster store. No more homework.
+            $852/year. Faster store. No more homework.
           </motion.p>
 
           <motion.div

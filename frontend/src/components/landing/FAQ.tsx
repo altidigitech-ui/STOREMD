@@ -15,8 +15,8 @@ const FAQS = [
     a: "Other apps read your metadata and send you a PDF. We actually use your store — real browser, real clicks, real checkout flow, real slow-network testing. And we don't stop at finding issues: we ship the fixes automatically. You wake up to results, not homework.",
   },
   {
-    q: "Do I really save $600/year switching?",
-    a: "Depends on your current stack. Run our free audit — we detect your installed apps and show you the exact number. Typical merchant: 5 apps at $150/month combined. StoreMD Pro: $99/month. That's $612/year saved. Plus your store runs faster because one script replaces five.",
+    q: "Do I really save $850/year switching?",
+    a: "Depends on your current stack. Run our free audit — we detect your installed apps and show you the exact number. Typical merchant: 5 apps at $150/month combined. StoreMD Pro: $79/month. That's $852/year saved. Plus your store runs faster because one script replaces five.",
   },
   {
     q: "Will I lose my SEO data or settings if I switch?",

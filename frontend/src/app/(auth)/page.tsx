@@ -24,7 +24,7 @@ export const metadata = {
   openGraph: {
     title: "StoreMD — One app. Five killed. Zero regrets.",
     description:
-      "The only Shopify app that uninstalls the others. Replace 5 apps with one agent that actually fixes what's broken. Save $600/year. Faster store. No more PDFs.",
+      "The only Shopify app that uninstalls the others. Replace 5 apps with one agent that actually fixes what's broken. Save $852/year. Faster store. No more PDFs.",
     url: "https://storemd.vercel.app",
     siteName: "StoreMD",
     type: "website",

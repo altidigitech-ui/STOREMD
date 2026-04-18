@@ -46,7 +46,7 @@ const ROWS: Row[] = [
   {
     feature: "Typical monthly cost for full coverage",
     them: "$150+/mo across 5 apps",
-    us: "$99/mo, one app, done",
+    us: "$79/mo, one app, done",
     usHighlight: true,
   },
 ];

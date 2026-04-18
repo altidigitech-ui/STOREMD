@@ -102,10 +102,10 @@ export function UninstallWall() {
                 All 5 above, in 1 AI agent. Actually fixes what it finds.
               </p>
               <div className="mt-4 flex items-center gap-2 text-xs">
-                <span className="font-mono text-cyan-400">$99/mo</span>
+                <span className="font-mono text-cyan-400">$79/mo</span>
                 <ArrowRight className="h-3 w-3 text-emerald-400" />
                 <span className="font-semibold text-emerald-400">
-                  Save $612/year
+                  Save $852/year
                 </span>
               </div>
             </div>
@@ -126,10 +126,10 @@ export function UninstallWall() {
                 $150/mo
               </span>
               <ArrowRight className="h-6 w-6 text-slate-500" />
-              <span className="text-cyan-400">$99/mo</span>
+              <span className="text-cyan-400">$79/mo</span>
             </div>
             <div className="mt-2 text-sm font-semibold text-emerald-400">
-              Saved: $612 per year. Free space: priceless.
+              Saved: $852 per year. Free space: priceless.
             </div>
           </div>
         </motion.div>

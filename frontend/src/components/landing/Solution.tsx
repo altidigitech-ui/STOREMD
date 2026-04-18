@@ -113,19 +113,19 @@ function BillComparison() {
             <CheckCircle2 className="h-5 w-5 text-cyan-400" />
             StoreMD Pro
           </span>
-          <span className="font-mono text-slate-300">$99/mo</span>
+          <span className="font-mono text-slate-300">$79/mo</span>
         </div>
 
         <div className="relative mt-6">
           <div className="flex items-end justify-between">
             <span className="text-sm text-slate-400">Monthly total</span>
             <span className="font-display text-3xl font-bold text-cyan-400">
-              $99<span className="text-base text-slate-500">/mo</span>
+              $79<span className="text-base text-slate-500">/mo</span>
             </span>
           </div>
           <div className="mt-1 flex items-end justify-between">
             <span className="text-xs text-slate-500">Saved per year</span>
-            <span className="font-mono text-sm font-semibold text-emerald-400">+$612/year</span>
+            <span className="font-mono text-sm font-semibold text-emerald-400">+$852/year</span>
           </div>
         </div>
 
