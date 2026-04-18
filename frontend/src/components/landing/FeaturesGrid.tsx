@@ -22,33 +22,33 @@ const FEATURES: Feature[] = [
   {
     Icon: BarChart3,
     title: "Kills your SEO app",
-    body: "Meta tags, alt text, schema, sitemap, keyword optimization, broken link auto-redirects. Does everything Booster SEO, SEO King, Smart SEO, or Tapita do — and actually ships the fixes.",
+    body: "Meta tags, alt text, schema, sitemap, keyword optimization, broken link auto-redirects. Does everything a standalone SEO app does — and actually ships the fixes.",
   },
   {
     Icon: Activity,
     title: "Kills your speed app",
-    body: "Core Web Vitals, image compression, lazy load, ghost script detection. Replaces PageSpeed Optimizer, TinyIMG, and similar — without adding yet another script to your theme.",
+    body: "Core Web Vitals, image compression, lazy load, ghost script detection. Replaces your dedicated speed app — without adding yet another script to your theme.",
     span: "wide",
   },
   {
     Icon: Shield,
     title: "Kills your accessibility app",
-    body: "WCAG 2.1 AA + EU Accessibility Act (EAA) compliance. Fines start at €10,000 per violation. Replaces Accessibly, UserWay, accessiBe — fraction of the price.",
+    body: "WCAG 2.1 AA + EU Accessibility Act (EAA) compliance. Fines start at €10,000 per violation. Replaces your accessibility overlay — fraction of the price.",
   },
   {
     Icon: Bug,
     title: "Kills your audit tool",
-    body: "Full health score across 20 dimensions. Prioritized by revenue impact, not severity. Replaces Plug In SEO, SearchPie audits. We don't rank issues — we rank them by how much money they cost you.",
+    body: "Full health score across 20 dimensions. Prioritized by revenue impact, not severity. We don't rank issues — we rank them by how much money they cost you.",
   },
   {
     Icon: Eye,
     title: "AI commerce — already built in",
-    body: "ChatGPT Shopping, Gemini, Copilot, Perplexity. LLMs.txt, GTIN, HS codes, structured data. No separate AEO app needed. The next $2,400 in sales will come from AI search. Be ready.",
+    body: "ChatGPT Shopping, Gemini, Copilot, Perplexity. LLMs.txt, GTIN, HS codes, structured data. No separate AEO app needed. The next $2,400 in sales will come from AI search.",
   },
   {
     Icon: Layers,
     title: "The one thing nobody else does",
-    body: "Real browser simulation every day. Our agent clicks through your store like a real customer, from a real phone, on real slow networks. Catches bugs before your buyers do. No competitor has this.",
+    body: "Real browser simulation every day. Our agent clicks through your store like a real customer, from a real phone, on real slow networks. Catches bugs before your buyers do.",
   },
 ];
 

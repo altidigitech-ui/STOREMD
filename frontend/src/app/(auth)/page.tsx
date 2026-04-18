@@ -5,6 +5,8 @@ import { PainPoints } from "@/components/landing/PainPoints";
 import { Solution } from "@/components/landing/Solution";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { FeaturesGrid } from "@/components/landing/FeaturesGrid";
+import { UninstallWall } from "@/components/landing/UninstallWall";
+import { ComparisonTable } from "@/components/landing/ComparisonTable";
 import { PricingPreview } from "@/components/landing/PricingPreview";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { FAQ } from "@/components/landing/FAQ";
@@ -70,6 +72,8 @@ export default function LandingPage() {
       <Solution />
       <HowItWorks />
       <FeaturesGrid />
+      <UninstallWall />
+      <ComparisonTable />
       <PricingPreview installHref={installHref} />
       <Testimonials />
       <section id="faq" className="relative py-24">
