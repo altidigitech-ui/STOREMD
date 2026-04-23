@@ -74,9 +74,7 @@ export function LandingPageClient({ installHref }: LandingPageClientProps) {
         <Footer />
       </div>
 
-      {showModal && (
-        <ShopInputModal installHref={installHref} onClose={closeModal} />
-      )}
+      <ShopInputModal open={showModal} installHref={installHref} onClose={closeModal} />
     </InstallModalContext.Provider>
   );
 }
