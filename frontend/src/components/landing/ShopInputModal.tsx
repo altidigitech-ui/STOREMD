@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, KeyboardEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Store, ArrowRight, AlertCircle } from "lucide-react";
-import { trackEvent } from "@/lib/tracking";
+import { trackEvent, withTrackingParams } from "@/lib/tracking";
 
 const SHOP_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
 
@@ -15,10 +15,11 @@ function normalizeShopDomain(raw: string): string {
 
 interface ShopInputModalProps {
   open: boolean;
+  installHref: string;
   onClose: () => void;
 }
 
-export function ShopInputModal({ open, onClose }: ShopInputModalProps) {
+export function ShopInputModal({ open, installHref, onClose }: ShopInputModalProps) {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -96,8 +97,9 @@ export function ShopInputModal({ open, onClose }: ShopInputModalProps) {
       return;
     }
     setError(null);
-    trackEvent("shop_input_submit", { shop: normalized });
-    window.location.href = `/preview?shop=${encodeURIComponent(normalized)}`;
+    const url = withTrackingParams(`${installHref}?shop=${normalized}`);
+    trackEvent("shop_input_submit", { shop: normalized, href: url });
+    window.location.href = url;
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {

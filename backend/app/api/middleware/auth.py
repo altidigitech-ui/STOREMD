@@ -34,7 +34,6 @@ PUBLIC_PATHS = frozenset(
         "/api/v1/webhooks/shop/redact",
         "/api/v1/tracking/pageview",
         "/api/v1/tracking/event",
-        "/api/v1/preview/scan",
         "/docs",
         "/openapi.json",
     }
