@@ -210,7 +210,6 @@ from app.api.routes.browser import router as browser_router  # noqa: E402
 from app.api.routes.reports import router as reports_router  # noqa: E402
 from app.api.routes.tracking import router as tracking_router  # noqa: E402
 from app.api.routes.admin import router as admin_router  # noqa: E402
-from app.api.routes.preview import router as preview_router  # noqa: E402
 
 app.include_router(health_router)
 app.include_router(auth_router)
@@ -231,7 +230,6 @@ app.include_router(browser_router)
 app.include_router(reports_router)
 app.include_router(tracking_router)
 app.include_router(admin_router)
-app.include_router(preview_router)
 
 # Debug router — never mounted in production.
 if not settings.is_production:

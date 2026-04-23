@@ -382,37 +382,3 @@ export interface WeeklyReportResponse {
   report_pdf_url: string | null;
   generated_at: string;
 }
-
-// ────────────────── Preview Scan (public, no auth) ──────────────────
-
-export interface PreviewIssue {
-  severity: "critical" | "major" | "minor" | "info";
-  title: string;
-  description: string;
-  category: string;
-  fix_available_after_install: boolean;
-}
-
-export interface LockedModule {
-  name: string;
-  description: string;
-  requires: string;
-}
-
-export interface PreviewScanResponse {
-  shop_domain: string;
-  store_url: string;
-  preview_score: number;
-  scan_duration_ms: number;
-  checks_run: number;
-  checks_available_after_install: number;
-  issues: PreviewIssue[];
-  summary: {
-    critical: number;
-    major: number;
-    minor: number;
-    info: number;
-  };
-  locked_modules: LockedModule[];
-  error: string | null;
-}
