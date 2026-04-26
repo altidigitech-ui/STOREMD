@@ -17,7 +17,7 @@ logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/v1/preview", tags=["preview"])
 
-_SHOP_DOMAIN_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9\-]*\.myshopify\.com$")
+_SHOP_DOMAIN_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9.\-]*\.[a-zA-Z]{2,}$")
 _RATE_LIMIT_PER_HOUR = 5
 _RATE_LIMIT_WINDOW_S = 3600
 
@@ -29,8 +29,12 @@ class PreviewScanRequest(BaseModel):
     @classmethod
     def validate_shop_domain(cls, v: str) -> str:
         v = v.strip().lower()
+        # Strip protocol if accidentally included
+        v = re.sub(r"^https?://", "", v)
+        # Strip trailing slash and path
+        v = v.split("/")[0]
         if not _SHOP_DOMAIN_RE.match(v):
-            raise ValueError("Invalid Shopify store domain")
+            raise ValueError("Invalid store domain — use yourstore.myshopify.com or yourstore.com")
         return v
 
 
