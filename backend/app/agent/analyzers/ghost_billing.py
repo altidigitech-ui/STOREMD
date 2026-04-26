@@ -28,6 +28,7 @@ query {
           id
           name
           status
+          createdAt
           lineItems {
             plan {
               pricingDetails {
@@ -138,6 +139,10 @@ class GhostBillingDetector(BaseScanner):
                 if app["id"] in installed_app_ids:
                     continue  # Installed and billing — legitimate charge.
 
+                cancel_url = (
+                    f"https://{shopify.shop_domain}"
+                    "/admin/settings/billing/subscriptions"
+                )
                 severity = "critical" if monthly_total >= 50 else "major"
                 issues.append(ScanIssue(
                     module="health",
@@ -153,16 +158,21 @@ class GhostBillingDetector(BaseScanner):
                     impact_unit="dollars",
                     fix_type="manual",
                     fix_description=(
-                        f"Cancel at https://{shopify.shop_domain}"
-                        "/admin/settings/billing/subscriptions"
+                        f"Steps to cancel:\n"
+                        f"1. Open {cancel_url}\n"
+                        f"2. Find \"{app['title']}\" in the subscriptions list\n"
+                        f"3. Click \"Cancel subscription\" — saves ${monthly_total:.2f}/month immediately"
                     ),
                     auto_fixable=False,
                     context={
-                        "subscription_id": sub["id"],
+                        "charge_id": sub["id"],
                         "app_id": app["id"],
                         "app_handle": app["handle"],
                         "charge_name": app["title"],
                         "charge_amount": f"{monthly_total:.2f}",
+                        "charge_since": sub.get("createdAt", ""),
+                        "cancel_url": cancel_url,
+                        "shop_domain": shopify.shop_domain,
                     },
                 ))
 

@@ -198,6 +198,7 @@ MOCK_APPS_WITH_BILLING = {
                             "id": "gid://shopify/AppSubscription/20",
                             "name": "Basic Plan",
                             "status": "ACTIVE",
+                            "createdAt": "2025-11-01T00:00:00Z",
                             "lineItems": [
                                 {
                                     "plan": {

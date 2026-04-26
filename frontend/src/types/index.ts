@@ -86,6 +86,7 @@ export interface ScanIssue {
   auto_fixable: boolean;
   fix_applied: boolean;
   dismissed: boolean;
+  context?: Record<string, string>;
 }
 
 export interface ScanDetailResponse {
