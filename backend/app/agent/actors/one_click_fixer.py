@@ -282,9 +282,17 @@ class OneClickFixer:
         _raise_on_user_errors(payload, "urlRedirectCreate")
 
         created = payload.get("urlRedirect") or {}
+        redirect_id = created.get("id")
+        if not redirect_id:
+            logger.warning(
+                "urlRedirectCreate_null_id",
+                from_path=from_path,
+                to_path=to_path,
+                detail="urlRedirectCreate succeeded but returned null ID — revert will be impossible for this redirect",
+            )
         after = {
             "redirect": {
-                "id": created.get("id"),
+                "id": redirect_id,
                 "path": created.get("path", from_path),
                 "target": created.get("target", to_path),
             }

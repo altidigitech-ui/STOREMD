@@ -236,7 +236,12 @@ async def revert_fix(
             redirect_id = (after_state_data.get("redirect") or {}).get("id")
             if redirect_id:
                 await fixer.delete_redirect(redirect_id)
-            # If redirect_id is None the redirect was never created — nothing to do.
+            else:
+                logger.warning(
+                    "redirect_revert_null_id",
+                    fix_id=fix_id,
+                    detail="Cannot revert redirect fix — stored redirect_id is null, orphan redirect may remain",
+                )
         else:
             reverse_fix: dict[str, Any] = {
                 "fix_type": fix["fix_type"],
