@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import AsyncMock
 
 from app.agent.analyzers.ghost_billing import GhostBillingDetector
-from tests.mocks.shopify_responses import MOCK_APPS_DATA, MOCK_RECURRING_CHARGES
+from tests.mocks.shopify_responses import MOCK_APPS_DATA, MOCK_APPS_WITH_BILLING
 
 
 @pytest.fixture
@@ -22,65 +22,197 @@ def mock_shopify():
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_detects_ghost_billing(scanner, mock_shopify):
-    """Happy path: detects an app billing without being installed."""
-    mock_shopify.graphql.return_value = MOCK_APPS_DATA
-    mock_shopify.rest_get.return_value = MOCK_RECURRING_CHARGES
+    """Happy path: an app billing but not installed is surfaced as a ghost charge."""
+    # First graphql call → billing data (includes ghost app App/99)
+    # Second graphql call → installed apps (App/99 absent)
+    mock_shopify.graphql.side_effect = [MOCK_APPS_WITH_BILLING, MOCK_APPS_DATA]
 
     result = await scanner.scan("store-1", mock_shopify, [])
 
     assert len(result.issues) == 1
-    assert result.issues[0].scanner == "ghost_billing"
-    assert result.issues[0].severity == "major"
-    assert "Old SEO App" in result.issues[0].title
+    issue = result.issues[0]
+    assert issue.scanner == "ghost_billing"
+    assert issue.severity == "major"
+    assert "Old SEO App" in issue.title
+    assert "9.99" in issue.title
+    assert "teststore.myshopify.com" in issue.fix_description
     assert result.metrics["ghost_charges"] == 1
-    assert result.metrics["total_ghost_monthly"] == 9.99
+    assert result.metrics["total_ghost_monthly"] == pytest.approx(9.99)
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_no_ghosts(scanner, mock_shopify):
-    """No ghost billing — all charges match installed apps."""
-    mock_shopify.graphql.return_value = MOCK_APPS_DATA
-    mock_shopify.rest_get.return_value = {
-        "recurring_application_charges": [
-            {
-                "id": 1,
-                "name": "Privy",
-                "status": "active",
-                "price": "29.99",
-                "created_at": "2026-01-01T00:00:00Z",
-            },
-        ]
+async def test_no_ghosts_when_all_billing_apps_installed(scanner, mock_shopify):
+    """No ghost charges when every billing app is in the installed list."""
+    billing_only_privy = {
+        "appInstallations": {
+            "edges": [
+                {
+                    "node": {
+                        "app": {
+                            "id": "gid://shopify/App/1",
+                            "title": "Privy",
+                            "handle": "privy",
+                        },
+                        "activeSubscriptions": [
+                            {
+                                "id": "gid://shopify/AppSubscription/10",
+                                "name": "Growth Plan",
+                                "status": "ACTIVE",
+                                "lineItems": [
+                                    {
+                                        "plan": {
+                                            "pricingDetails": {
+                                                "price": {
+                                                    "amount": "29.99",
+                                                    "currencyCode": "USD",
+                                                },
+                                                "interval": "EVERY_30_DAYS",
+                                            }
+                                        }
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                }
+            ]
+        }
     }
+    # Privy (App/1) is billing AND is in MOCK_APPS_DATA → no ghost
+    mock_shopify.graphql.side_effect = [billing_only_privy, MOCK_APPS_DATA]
 
     result = await scanner.scan("store-1", mock_shopify, [])
 
     assert len(result.issues) == 0
     assert result.metrics["ghost_charges"] == 0
+    assert result.metrics["apps_with_billing"] == 1
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_shopify_api_error(scanner, mock_shopify):
-    """Shopify API failure propagates as ShopifyError."""
+async def test_no_issues_when_no_active_subscriptions(scanner, mock_shopify):
+    """Scan produces no issues when no apps have active subscriptions."""
+    no_billing = {
+        "appInstallations": {
+            "edges": [
+                {
+                    "node": {
+                        "app": {
+                            "id": "gid://shopify/App/1",
+                            "title": "Privy",
+                            "handle": "privy",
+                        },
+                        "activeSubscriptions": [],
+                    }
+                }
+            ]
+        }
+    }
+    mock_shopify.graphql.side_effect = [no_billing, MOCK_APPS_DATA]
+
+    result = await scanner.scan("store-1", mock_shopify, [])
+
+    assert len(result.issues) == 0
+    assert result.metrics["ghost_charges"] == 0
+    assert result.metrics["apps_with_billing"] == 0
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_critical_severity_for_high_charge(scanner, mock_shopify):
+    """A ghost charge >= $50/month is marked critical."""
+    billing_data = {
+        "appInstallations": {
+            "edges": [
+                {
+                    "node": {
+                        "app": {
+                            "id": "gid://shopify/App/99",
+                            "title": "Expensive Ghost App",
+                            "handle": "expensive-ghost",
+                        },
+                        "activeSubscriptions": [
+                            {
+                                "id": "gid://shopify/AppSubscription/30",
+                                "name": "Enterprise",
+                                "status": "ACTIVE",
+                                "lineItems": [
+                                    {
+                                        "plan": {
+                                            "pricingDetails": {
+                                                "price": {
+                                                    "amount": "99.00",
+                                                    "currencyCode": "USD",
+                                                },
+                                                "interval": "EVERY_30_DAYS",
+                                            }
+                                        }
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                }
+            ]
+        }
+    }
+    # App/99 is NOT in MOCK_APPS_DATA → ghost
+    mock_shopify.graphql.side_effect = [billing_data, MOCK_APPS_DATA]
+
+    result = await scanner.scan("store-1", mock_shopify, [])
+
+    assert len(result.issues) == 1
+    assert result.issues[0].severity == "critical"
+    assert result.metrics["total_ghost_monthly"] == pytest.approx(99.0)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_billing_query_failure_returns_empty_result(scanner, mock_shopify):
+    """A Shopify API error on the billing query degrades gracefully — no exception raised."""
     from app.core.exceptions import ErrorCode, ShopifyError
 
-    mock_shopify.rest_get.side_effect = ShopifyError(
+    mock_shopify.graphql.side_effect = ShopifyError(
         code=ErrorCode.SHOPIFY_API_UNAVAILABLE,
         message="Shopify down",
         status_code=503,
     )
 
-    with pytest.raises(ShopifyError):
-        await scanner.scan("store-1", mock_shopify, [])
+    result = await scanner.scan("store-1", mock_shopify, [])
+
+    assert result.scanner_name == "ghost_billing"
+    assert result.issues == []
+    assert result.metrics["skipped"] == "graphql_error"
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_installed_query_failure_returns_empty_result(scanner, mock_shopify):
+    """Failure on the second (installed apps) query degrades gracefully."""
+    from app.core.exceptions import ErrorCode, ShopifyError
+
+    mock_shopify.graphql.side_effect = [
+        MOCK_APPS_WITH_BILLING,
+        ShopifyError(
+            code=ErrorCode.SHOPIFY_API_UNAVAILABLE,
+            message="Shopify down",
+            status_code=503,
+        ),
+    ]
+
+    result = await scanner.scan("store-1", mock_shopify, [])
+
+    assert result.issues == []
+    assert result.metrics["skipped"] == "installed_query_error"
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_should_run_plan(scanner):
-    """Verify should_run based on plan and module."""
+    """Verify should_run gates on plan and module."""
     assert await scanner.should_run(["health"], "starter") is True
     assert await scanner.should_run(["health"], "pro") is True
     assert await scanner.should_run(["health"], "agency") is True
-    assert await scanner.should_run(["health"], "free") is False  # requires starter
-    assert await scanner.should_run(["listings"], "pro") is False  # wrong module
+    assert await scanner.should_run(["health"], "free") is False
+    assert await scanner.should_run(["listings"], "pro") is False
