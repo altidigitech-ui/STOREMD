@@ -1,9 +1,12 @@
-"""Tests for StripeBillingService."""
+"""Tests for StripeBillingService and ShopifyBillingService."""
 
 import pytest
-from unittest.mock import MagicMock
+import httpx
+from unittest.mock import AsyncMock, MagicMock, patch
 
+from app.core.exceptions import BillingError, ErrorCode
 from app.services.stripe_billing import StripeBillingService, PLAN_HIERARCHY, USAGE_LIMITS
+from app.services.shopify_billing import ShopifyBillingService
 
 
 @pytest.fixture
@@ -86,3 +89,135 @@ def test_plan_hierarchy():
     assert PLAN_HIERARCHY["free"] < PLAN_HIERARCHY["starter"]
     assert PLAN_HIERARCHY["starter"] < PLAN_HIERARCHY["pro"]
     assert PLAN_HIERARCHY["pro"] < PLAN_HIERARCHY["agency"]
+
+
+# ─── ShopifyBillingService error-code tests ───────────────────────────────────
+
+def _shopify_service() -> ShopifyBillingService:
+    return ShopifyBillingService(
+        shop_domain="test.myshopify.com",
+        access_token="shpat_test",
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_shopify_billing_http_error_uses_shopify_code():
+    """_graphql raises BillingError with SHOPIFY_BILLING_FAILED on HTTP error."""
+    svc = _shopify_service()
+    mock_response = MagicMock()
+    mock_response.status_code = 503
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_client_cls.return_value = mock_client
+
+        with pytest.raises(BillingError) as exc_info:
+            await svc._graphql("query { shop { name } }", {})
+
+    assert exc_info.value.code == ErrorCode.SHOPIFY_BILLING_FAILED
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_shopify_billing_graphql_error_uses_shopify_code():
+    """_graphql raises BillingError with SHOPIFY_BILLING_FAILED on GraphQL errors."""
+    svc = _shopify_service()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"errors": [{"message": "Access denied"}]}
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_client_cls.return_value = mock_client
+
+        with pytest.raises(BillingError) as exc_info:
+            await svc._graphql("query { shop { name } }", {})
+
+    assert exc_info.value.code == ErrorCode.SHOPIFY_BILLING_FAILED
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_shopify_billing_invalid_plan_uses_shopify_code():
+    """create_subscription raises BillingError with SHOPIFY_BILLING_FAILED for unknown plan."""
+    svc = _shopify_service()
+    with pytest.raises(BillingError) as exc_info:
+        await svc.create_subscription(plan="enterprise", return_url="https://example.com")
+
+    assert exc_info.value.code == ErrorCode.SHOPIFY_BILLING_FAILED
+    assert exc_info.value.status_code == 400
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_shopify_billing_user_errors_uses_shopify_code():
+    """create_subscription raises BillingError with SHOPIFY_BILLING_FAILED on userErrors."""
+    svc = _shopify_service()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "data": {
+            "appSubscriptionCreate": {
+                "appSubscription": None,
+                "confirmationUrl": None,
+                "userErrors": [{"field": "name", "message": "Name too long"}],
+            }
+        }
+    }
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_client_cls.return_value = mock_client
+
+        with pytest.raises(BillingError) as exc_info:
+            await svc.create_subscription(plan="pro", return_url="https://example.com")
+
+    assert exc_info.value.code == ErrorCode.SHOPIFY_BILLING_FAILED
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_shopify_cancel_user_errors_uses_shopify_code():
+    """cancel_subscription raises BillingError with SHOPIFY_BILLING_FAILED on userErrors."""
+    svc = _shopify_service()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "data": {
+            "appSubscriptionCancel": {
+                "appSubscription": None,
+                "userErrors": [{"field": "id", "message": "Not found"}],
+            }
+        }
+    }
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_client_cls.return_value = mock_client
+
+        with pytest.raises(BillingError) as exc_info:
+            await svc.cancel_subscription("gid://shopify/AppSubscription/123")
+
+    assert exc_info.value.code == ErrorCode.SHOPIFY_BILLING_FAILED
+
+
+# ─── Stripe still uses STRIPE_CHECKOUT_FAILED ────────────────────────────────
+
+@pytest.mark.unit
+def test_stripe_checkout_error_code_unchanged(mock_supabase):
+    """StripeBillingService errors still use STRIPE_CHECKOUT_FAILED, not SHOPIFY_BILLING_FAILED."""
+    _mock_merchant(mock_supabase, plan="free", stripe_customer_id=None)
+    billing = StripeBillingService(mock_supabase)
+    # Verify the code value is the Stripe-specific one
+    assert ErrorCode.STRIPE_CHECKOUT_FAILED == "BILLING_CHECKOUT_FAILED"
+    assert ErrorCode.SHOPIFY_BILLING_FAILED == "SHOPIFY_BILLING_FAILED"
+    assert ErrorCode.STRIPE_CHECKOUT_FAILED != ErrorCode.SHOPIFY_BILLING_FAILED
