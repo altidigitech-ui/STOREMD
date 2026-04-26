@@ -223,3 +223,77 @@ async def test_should_run_plan(scanner):
     assert await scanner.should_run(["health"], "agency") is True
     assert await scanner.should_run(["health"], "free") is False
     assert await scanner.should_run(["listings"], "pro") is False
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_uninstalled_app_excluded_from_installed_set(scanner, mock_shopify):
+    """An app with uninstalledAt set must not appear in installed_app_ids.
+
+    Shopify's appInstallations returns historical records for uninstalled apps
+    too. The fix adds `uninstalledAt` to FETCH_INSTALLED_QUERY and filters it
+    in Python so ghost charges are correctly detected.
+    """
+    billing_data = {
+        "appInstallations": {
+            "edges": [
+                {
+                    "node": {
+                        "app": {
+                            "id": "gid://shopify/App/77",
+                            "title": "Formerly Installed App",
+                            "handle": "formerly-installed",
+                        },
+                        "activeSubscriptions": [
+                            {
+                                "id": "gid://shopify/AppSubscription/77",
+                                "name": "Basic",
+                                "status": "ACTIVE",
+                                "createdAt": "2026-01-01T00:00:00Z",
+                                "lineItems": [
+                                    {
+                                        "plan": {
+                                            "pricingDetails": {
+                                                "price": {
+                                                    "amount": "19.99",
+                                                    "currencyCode": "USD",
+                                                },
+                                                "interval": "EVERY_30_DAYS",
+                                            }
+                                        }
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                }
+            ]
+        }
+    }
+    # The installed query returns App/77 but with uninstalledAt set — it was
+    # uninstalled and must be excluded from the reference set.
+    installed_data = {
+        "appInstallations": {
+            "edges": [
+                {
+                    "node": {
+                        "app": {
+                            "id": "gid://shopify/App/77",
+                            "title": "Formerly Installed App",
+                            "handle": "formerly-installed",
+                        },
+                        "uninstalledAt": "2026-01-01T00:00:00Z",
+                    }
+                }
+            ]
+        }
+    }
+    mock_shopify.graphql.side_effect = [billing_data, installed_data]
+
+    result = await scanner.scan("store-1", mock_shopify, [])
+
+    # App/77 has uninstalledAt set → excluded from installed_app_ids → ghost charge
+    assert len(result.issues) == 1
+    assert result.issues[0].context["app_id"] == "gid://shopify/App/77"
+    assert result.metrics["ghost_charges"] == 1
+    assert result.metrics["total_ghost_monthly"] == pytest.approx(19.99)
