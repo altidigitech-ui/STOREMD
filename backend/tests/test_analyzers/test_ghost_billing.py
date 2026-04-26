@@ -38,6 +38,13 @@ async def test_detects_ghost_billing(scanner, mock_shopify):
     assert "teststore.myshopify.com" in issue.fix_description
     assert result.metrics["ghost_charges"] == 1
     assert result.metrics["total_ghost_monthly"] == pytest.approx(9.99)
+    # Context fields required by the frontend cancel guide
+    assert issue.context["cancel_url"] == (
+        "https://teststore.myshopify.com/admin/settings/billing/subscriptions"
+    )
+    assert issue.context["shop_domain"] == "teststore.myshopify.com"
+    assert issue.context["charge_name"] == "Old SEO App"
+    assert issue.context["charge_since"] == "2025-11-01T00:00:00Z"
 
 
 @pytest.mark.unit

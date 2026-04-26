@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { AlertTriangle, AlertCircle, Info, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { GhostBillingCancelGuide } from "@/components/dashboard/GhostBillingCancelGuide";
 import { cn, getSeverityBorderColor } from "@/lib/utils";
 import type { ScanIssue } from "@/types";
 
@@ -38,8 +40,18 @@ const severityConfig: Record<
 };
 
 export function IssueCard({ issue, onFix, onDismiss }: IssueCardProps) {
+  const [dismissed, setDismissed] = useState(false);
+
+  if (dismissed) return null;
+
   const config = severityConfig[issue.severity] ?? severityConfig.info;
   const Icon = config.icon;
+  const isGhostBilling = issue.scanner === "ghost_billing" && !issue.auto_fixable;
+
+  function handleDismiss(id: string) {
+    setDismissed(true);
+    onDismiss?.(id);
+  }
 
   return (
     <div
@@ -76,26 +88,31 @@ export function IssueCard({ issue, onFix, onDismiss }: IssueCardProps) {
         {issue.impact && (
           <p className="mt-1 text-xs text-gray-500">Impact: {issue.impact}</p>
         )}
-        {issue.fix_description && (
+        {/* Ghost billing instructions are shown in the modal, not inline */}
+        {issue.fix_description && !isGhostBilling && (
           <p className="mt-2 text-sm text-gray-600">{issue.fix_description}</p>
         )}
       </div>
 
       <div className="flex flex-shrink-0 flex-col gap-2">
-        {issue.auto_fixable && onFix && (
-          <Button
-            data-testid="fix-button"
-            size="sm"
-            onClick={() => onFix(issue.id)}
-          >
-            Fix →
-          </Button>
+        {isGhostBilling ? (
+          <GhostBillingCancelGuide issue={issue} onDismiss={handleDismiss} />
+        ) : (
+          issue.auto_fixable && onFix && (
+            <Button
+              data-testid="fix-button"
+              size="sm"
+              onClick={() => onFix(issue.id)}
+            >
+              Fix →
+            </Button>
+          )
         )}
         {onDismiss && (
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => onDismiss(issue.id)}
+            onClick={() => handleDismiss(issue.id)}
           >
             Dismiss
           </Button>
