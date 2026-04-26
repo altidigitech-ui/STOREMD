@@ -76,6 +76,15 @@ mutation UrlRedirectCreate($urlRedirect: UrlRedirectInput!) {
 }
 """
 
+_URL_REDIRECT_DELETE = """
+mutation UrlRedirectDelete($id: ID!) {
+  urlRedirectDelete(id: $id) {
+    deletedUrlRedirectId
+    userErrors { field message }
+  }
+}
+"""
+
 
 _SCRIPT_TAG_LOOKUP = """
 query ScriptTagLookup($id: ID!) {
@@ -286,6 +295,16 @@ class OneClickFixer:
             to_path=to_path,
         )
         return before, after
+
+    async def delete_redirect(self, redirect_id: str) -> None:
+        """Delete a URL redirect by its GID (used for revert)."""
+        data = await self.shopify.graphql(
+            _URL_REDIRECT_DELETE,
+            {"id": redirect_id},
+        )
+        payload = data.get("urlRedirectDelete", {}) or {}
+        _raise_on_user_errors(payload, "urlRedirectDelete")
+        logger.info("one_click_fix_redirect_deleted", redirect_id=redirect_id)
 
     # -- Residue script removal ------------------------------------------
 

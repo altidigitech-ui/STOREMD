@@ -222,21 +222,28 @@ async def revert_fix(
             status_code=400,
         )
 
-    # Revert = apply the before_state as the "after" of the reverse op.
-    # Reuse the dispatcher by swapping before/after.
     from app.agent.actors.one_click_fixer import OneClickFixer
 
     shopify = _shopify_client(store, merchant)
     fixer = OneClickFixer(shopify)
 
-    reverse_fix: dict[str, Any] = {
-        "fix_type": fix["fix_type"],
-        "target_id": fix.get("target_id"),
-        "after_state": fix.get("before_state"),
-    }
-
     try:
-        await _dispatch_fix(fix=reverse_fix, fixer=fixer)
+        if fix["fix_type"] == "redirect":
+            # Revert redirect = DELETE the created redirect (Shopify doesn't
+            # support "undo create" via another create with empty paths).
+            # The redirect GID is stored in after_state.redirect.id.
+            after_state_data = fix.get("after_state") or {}
+            redirect_id = (after_state_data.get("redirect") or {}).get("id")
+            if redirect_id:
+                await fixer.delete_redirect(redirect_id)
+            # If redirect_id is None the redirect was never created — nothing to do.
+        else:
+            reverse_fix: dict[str, Any] = {
+                "fix_type": fix["fix_type"],
+                "target_id": fix.get("target_id"),
+                "after_state": fix.get("before_state"),
+            }
+            await _dispatch_fix(fix=reverse_fix, fixer=fixer)
     except ShopifyError as exc:
         logger.warning(
             "fix_revert_shopify_error",
