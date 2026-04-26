@@ -5,10 +5,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X, Store, ArrowRight, AlertCircle } from "lucide-react";
 import { trackEvent } from "@/lib/tracking";
 
-const SHOP_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
+const SHOP_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/;
 
 function normalizeShopDomain(raw: string): string {
-  const trimmed = raw.trim().toLowerCase();
+  let trimmed = raw.trim().toLowerCase();
+  // Strip protocol prefix (https://, http://)
+  trimmed = trimmed.replace(/^https?:\/\//, "");
+  // Strip trailing slash and any path
+  trimmed = trimmed.split("/")[0];
   if (trimmed.includes(".")) return trimmed;
   return `${trimmed}.myshopify.com`;
 }
@@ -91,7 +95,7 @@ export function ShopInputModal({ open, onClose }: ShopInputModalProps) {
   function handleSubmit() {
     const normalized = normalizeShopDomain(value);
     if (!SHOP_REGEX.test(normalized)) {
-      setError("Enter a valid Shopify store URL (e.g. yourstore.myshopify.com)");
+      setError("Enter a valid domain (e.g. yourstore.myshopify.com or yourstore.com)");
       inputRef.current?.focus();
       return;
     }
@@ -176,7 +180,7 @@ export function ShopInputModal({ open, onClose }: ShopInputModalProps) {
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck={false}
-                placeholder="yourstore.myshopify.com"
+                placeholder="yourstore.myshopify.com or yourstore.com"
                 value={value}
                 onChange={(e) => {
                   setValue(e.target.value);
@@ -218,7 +222,7 @@ export function ShopInputModal({ open, onClose }: ShopInputModalProps) {
             </button>
 
             <p className="mt-4 text-center text-xs text-slate-600">
-              No credit card required &middot; Installs in 30 seconds
+              No credit card required &middot; Results in 30 seconds
             </p>
           </motion.div>
         </motion.div>
