@@ -150,3 +150,71 @@ MOCK_RECURRING_CHARGES = {
         },
     ]
 }
+
+# GraphQL response for the ghost billing FETCH_BILLING_QUERY.
+# Includes "Old SEO App" (App/99) which is NOT in MOCK_APPS_DATA's installed
+# list, so it registers as a ghost charge in tests.
+MOCK_APPS_WITH_BILLING = {
+    "appInstallations": {
+        "edges": [
+            {
+                "node": {
+                    "app": {
+                        "id": "gid://shopify/App/1",
+                        "title": "Privy",
+                        "handle": "privy",
+                    },
+                    "activeSubscriptions": [
+                        {
+                            "id": "gid://shopify/AppSubscription/10",
+                            "name": "Growth Plan",
+                            "status": "ACTIVE",
+                            "lineItems": [
+                                {
+                                    "plan": {
+                                        "pricingDetails": {
+                                            "price": {
+                                                "amount": "29.99",
+                                                "currencyCode": "USD",
+                                            },
+                                            "interval": "EVERY_30_DAYS",
+                                        }
+                                    }
+                                }
+                            ],
+                        }
+                    ],
+                }
+            },
+            {
+                "node": {
+                    "app": {
+                        "id": "gid://shopify/App/99",
+                        "title": "Old SEO App",
+                        "handle": "old-seo-app",
+                    },
+                    "activeSubscriptions": [
+                        {
+                            "id": "gid://shopify/AppSubscription/20",
+                            "name": "Basic Plan",
+                            "status": "ACTIVE",
+                            "lineItems": [
+                                {
+                                    "plan": {
+                                        "pricingDetails": {
+                                            "price": {
+                                                "amount": "9.99",
+                                                "currencyCode": "USD",
+                                            },
+                                            "interval": "EVERY_30_DAYS",
+                                        }
+                                    }
+                                }
+                            ],
+                        }
+                    ],
+                }
+            },
+        ]
+    }
+}

@@ -14,15 +14,48 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
-FETCH_APPS_QUERY = """
+# Returns app installations WITH their active billing subscriptions.
+# Shopify retains AppInstallation records (and active billing) even after the
+# merchant uninstalls the app, so this query surfaces charges from apps that
+# may no longer be active in the merchant's Shopify Admin.
+FETCH_BILLING_QUERY = """
 query {
-    appInstallations(first: 50) {
-        edges {
-            node {
-                app { id title handle }
+  appInstallations(first: 50) {
+    edges {
+      node {
+        app { id title handle }
+        activeSubscriptions {
+          id
+          name
+          status
+          lineItems {
+            plan {
+              pricingDetails {
+                ... on AppRecurringPricing {
+                  price { amount currencyCode }
+                  interval
+                }
+              }
             }
+          }
         }
+      }
     }
+  }
+}
+"""
+
+# Returns only the currently-installed apps (no billing data).
+# Used as the reference set to cross-check against the billing query.
+FETCH_INSTALLED_QUERY = """
+query {
+  appInstallations(first: 50) {
+    edges {
+      node {
+        app { id title handle }
+      }
+    }
+  }
 }
 """
 
@@ -30,8 +63,13 @@ query {
 class GhostBillingDetector(BaseScanner):
     """Detect apps that are no longer installed but still billing.
 
-    Compares Shopify recurring_application_charges (REST) against
-    the installed apps list (GraphQL) to find ghost charges.
+    Two GraphQL calls:
+      1. FETCH_BILLING_QUERY  → all AppInstallation records with active billing
+         (includes apps that were uninstalled but whose subscription persists)
+      2. FETCH_INSTALLED_QUERY → apps currently installed in the merchant's admin
+
+    Any app with an active recurring charge that is absent from the installed
+    set is a ghost charge.
     """
 
     name = "ghost_billing"
@@ -45,95 +83,95 @@ class GhostBillingDetector(BaseScanner):
         shopify: ShopifyClient,
         memory_context: list[dict],
     ) -> ScannerResult:
-        # 1. Fetch active charges (REST endpoint).
-        # recurring_application_charges requires a scope our public app
-        # doesn't currently hold. Surface this as an info issue rather
-        # than tanking the whole scan.
+        # 1. Fetch all billing subscriptions (includes ghost-billing apps).
         try:
-            charges_data = await shopify.rest_get("recurring_application_charges")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("ghost_billing_scope_unavailable", error=str(exc))
-            return ScannerResult(
-                scanner_name=self.name,
-                issues=[ScanIssue(
-                    module="health",
-                    scanner=self.name,
-                    severity="info",
-                    title="Ghost billing check requires additional permissions",
-                    description=(
-                        "StoreMD needs the read_all_orders permission to detect "
-                        "apps still billing after uninstall. Re-install StoreMD "
-                        "to grant this permission."
-                    ),
-                    fix_type="manual",
-                    fix_description="Re-install StoreMD from the Shopify App Store",
-                    auto_fixable=False,
-                )],
-                metrics={"skipped": "missing_scope", "error": str(exc)},
+            billing_data = await shopify.graphql(FETCH_BILLING_QUERY)
+        except Exception as exc:
+            logger.warning(
+                "ghost_billing_query_failed",
+                store_id=store_id,
+                error=str(exc),
             )
-
-        active_charges = [
-            c for c in charges_data.get("recurring_application_charges", [])
-            if c["status"] == "active"
-        ]
-
-        # 2. Fetch installed apps (GraphQL). Same access constraint as
-        # health_scorer — degrade if Shopify denies the scope.
-        try:
-            apps_data = await shopify.graphql(FETCH_APPS_QUERY)
-            installed_app_names = {
-                edge["node"]["app"]["title"]
-                for edge in apps_data["appInstallations"]["edges"]
-            }
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("ghost_billing_apps_unavailable", error=str(exc))
             return ScannerResult(
                 scanner_name=self.name,
                 issues=[],
-                metrics={"skipped": "missing_apps_scope", "error": str(exc)},
+                metrics={"skipped": "graphql_error", "error": str(exc)},
             )
 
-        # 3. Compare: charges without a matching installed app = ghost
-        issues: list[ScanIssue] = []
-        for charge in active_charges:
-            if charge["name"] not in installed_app_names:
-                amount = float(charge["price"])
-                severity = "critical" if amount >= 50 else "major"
+        # 2. Fetch currently installed apps (the reference set).
+        try:
+            installed_data = await shopify.graphql(FETCH_INSTALLED_QUERY)
+            installed_app_ids = {
+                edge["node"]["app"]["id"]
+                for edge in installed_data["appInstallations"]["edges"]
+            }
+        except Exception as exc:
+            logger.warning(
+                "ghost_billing_installed_query_failed",
+                store_id=store_id,
+                error=str(exc),
+            )
+            return ScannerResult(
+                scanner_name=self.name,
+                issues=[],
+                metrics={"skipped": "installed_query_error", "error": str(exc)},
+            )
 
+        # 3. Cross-reference: billing apps NOT in the installed set = ghost charges.
+        issues: list[ScanIssue] = []
+        apps_with_billing = 0
+
+        for edge in billing_data["appInstallations"]["edges"]:
+            node = edge["node"]
+            app = node["app"]
+
+            for sub in node.get("activeSubscriptions", []):
+                if sub.get("status") != "ACTIVE":
+                    continue
+
+                monthly_total = _sum_monthly_charge(sub)
+                if monthly_total == 0:
+                    continue
+
+                apps_with_billing += 1
+
+                if app["id"] in installed_app_ids:
+                    continue  # Installed and billing — legitimate charge.
+
+                severity = "critical" if monthly_total >= 50 else "major"
                 issues.append(ScanIssue(
                     module="health",
                     scanner=self.name,
                     severity=severity,
-                    title=f"Ghost billing: {charge['name']} (${charge['price']}/month)",
+                    title=f"Ghost billing: {app['title']} (${monthly_total:.2f}/month)",
                     description=(
-                        f"App '{charge['name']}' is no longer installed but still "
-                        f"charging ${charge['price']}/month since "
-                        f"{charge['created_at'][:10]}."
+                        f"'{app['title']}' is no longer installed but still charging "
+                        f"${monthly_total:.2f}/month."
                     ),
-                    impact=f"${charge['price']}/month lost",
-                    impact_value=amount,
+                    impact=f"${monthly_total:.2f}/month lost",
+                    impact_value=monthly_total,
                     impact_unit="dollars",
                     fix_type="manual",
                     fix_description=(
-                        "Cancel this charge in Shopify Admin -> Settings -> Billing"
+                        f"Cancel at https://{shopify.shop_domain}"
+                        "/admin/settings/billing/subscriptions"
                     ),
                     auto_fixable=False,
                     context={
-                        "charge_id": charge["id"],
-                        "charge_name": charge["name"],
-                        "charge_amount": charge["price"],
-                        "charge_since": charge["created_at"],
+                        "subscription_id": sub["id"],
+                        "app_id": app["id"],
+                        "app_handle": app["handle"],
+                        "charge_name": app["title"],
+                        "charge_amount": f"{monthly_total:.2f}",
                     },
                 ))
 
-        total_ghost_monthly = sum(
-            float(i.context["charge_amount"]) for i in issues
-        )
+        total_ghost_monthly = sum(float(i.context["charge_amount"]) for i in issues)
 
         logger.info(
             "ghost_billing_scan_complete",
             store_id=store_id,
-            active_charges=len(active_charges),
+            apps_with_billing=apps_with_billing,
             ghost_charges=len(issues),
             total_ghost_monthly=total_ghost_monthly,
         )
@@ -142,8 +180,18 @@ class GhostBillingDetector(BaseScanner):
             scanner_name=self.name,
             issues=issues,
             metrics={
-                "active_charges": len(active_charges),
+                "apps_with_billing": apps_with_billing,
                 "ghost_charges": len(issues),
                 "total_ghost_monthly": total_ghost_monthly,
             },
         )
+
+
+def _sum_monthly_charge(subscription: dict) -> float:
+    """Sum EVERY_30_DAYS line item amounts for a subscription."""
+    total = 0.0
+    for item in subscription.get("lineItems", []):
+        pricing = item.get("plan", {}).get("pricingDetails", {})
+        if pricing.get("interval") == "EVERY_30_DAYS":
+            total += float(pricing.get("price", {}).get("amount", 0))
+    return total
