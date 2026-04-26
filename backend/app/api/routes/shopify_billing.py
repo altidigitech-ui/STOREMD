@@ -173,7 +173,7 @@ async def cancel(
 
     if not subscription_id:
         raise BillingError(
-            code=ErrorCode.STRIPE_SUBSCRIPTION_NOT_FOUND,
+            code=ErrorCode.SHOPIFY_SUBSCRIPTION_NOT_FOUND,
             message="No active Shopify subscription to cancel",
             status_code=404,
         )
