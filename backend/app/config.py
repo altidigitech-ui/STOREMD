@@ -26,7 +26,15 @@ class Settings(BaseSettings):
     SHOPIFY_API_KEY: str
     SHOPIFY_API_SECRET: str
     SHOPIFY_API_VERSION: str = "2026-01"
-    SHOPIFY_SCOPES: str = "read_products,read_themes,read_orders,read_script_tags"
+    # NOTE: Adding write scopes requires existing merchants to re-install the app
+    # to grant the new permissions via the Shopify OAuth consent screen.
+    SHOPIFY_SCOPES: str = (
+        "read_products,write_products,"
+        "read_themes,"
+        "read_orders,"
+        "read_script_tags,write_script_tags,"
+        "read_url_redirects,write_url_redirects"
+    )
 
     # === Stripe ===
     STRIPE_SECRET_KEY: str = ""
