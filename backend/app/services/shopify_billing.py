@@ -61,7 +61,7 @@ class ShopifyBillingService:
             )
             if response.status_code != 200:
                 raise BillingError(
-                    code=ErrorCode.STRIPE_CHECKOUT_FAILED,
+                    code=ErrorCode.SHOPIFY_BILLING_FAILED,
                     message=(
                         "Shopify Billing API error: "
                         f"HTTP {response.status_code}"
@@ -72,7 +72,7 @@ class ShopifyBillingService:
             data = response.json()
             if "errors" in data:
                 raise BillingError(
-                    code=ErrorCode.STRIPE_CHECKOUT_FAILED,
+                    code=ErrorCode.SHOPIFY_BILLING_FAILED,
                     message=f"Shopify Billing GraphQL error: {data['errors']}",
                     status_code=502,
                     context={"shop": self.shop_domain},
@@ -93,7 +93,7 @@ class ShopifyBillingService:
         """
         if plan not in SHOPIFY_PLAN_PRICES:
             raise BillingError(
-                code=ErrorCode.STRIPE_CHECKOUT_FAILED,
+                code=ErrorCode.SHOPIFY_BILLING_FAILED,
                 message=f"Invalid plan: {plan}",
                 status_code=400,
             )
@@ -141,7 +141,7 @@ class ShopifyBillingService:
         user_errors = result.get("userErrors") or []
         if user_errors:
             raise BillingError(
-                code=ErrorCode.STRIPE_CHECKOUT_FAILED,
+                code=ErrorCode.SHOPIFY_BILLING_FAILED,
                 message=f"Shopify Billing rejected: {user_errors}",
                 status_code=400,
                 context={"shop": self.shop_domain, "plan": plan},
@@ -151,7 +151,7 @@ class ShopifyBillingService:
         subscription = result.get("appSubscription") or {}
         if not confirmation_url or not subscription.get("id"):
             raise BillingError(
-                code=ErrorCode.STRIPE_CHECKOUT_FAILED,
+                code=ErrorCode.SHOPIFY_BILLING_FAILED,
                 message="Shopify Billing missing confirmation URL",
                 status_code=502,
                 context={"shop": self.shop_domain},
@@ -222,7 +222,7 @@ class ShopifyBillingService:
         user_errors = result.get("userErrors") or []
         if user_errors:
             raise BillingError(
-                code=ErrorCode.STRIPE_CHECKOUT_FAILED,
+                code=ErrorCode.SHOPIFY_BILLING_FAILED,
                 message=f"Shopify subscription cancel failed: {user_errors}",
                 status_code=502,
                 context={
