@@ -54,6 +54,7 @@ query {
     edges {
       node {
         app { id title handle }
+        uninstalledAt
       }
     }
   }
@@ -105,6 +106,7 @@ class GhostBillingDetector(BaseScanner):
             installed_app_ids = {
                 edge["node"]["app"]["id"]
                 for edge in installed_data["appInstallations"]["edges"]
+                if edge["node"].get("uninstalledAt") is None
             }
         except Exception as exc:
             logger.warning(
