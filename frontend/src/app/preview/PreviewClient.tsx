@@ -239,6 +239,86 @@ function IssueCard({ issue }: { issue: PreviewIssue }) {
   );
 }
 
+// ─── Email capture ────────────────────────────────────────────────────────────
+
+function EmailCapture({ shop, score, issuesTotal }: { shop: string; score: number; issuesTotal: number }) {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+
+  const handleSubmit = async () => {
+    if (!email || !email.includes("@")) return;
+    setStatus("loading");
+    try {
+      const res = await fetch("/api/v1/preview/capture-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, shop_domain: shop, score, issues_total: issuesTotal }),
+      });
+      if (res.ok) {
+        setStatus("done");
+      } else {
+        setStatus("error");
+      }
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  if (status === "done") {
+    return (
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-16 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-8 text-center"
+      >
+        <p className="font-display text-lg font-bold text-cyan-400">Report sent!</p>
+        <p className="mt-2 text-sm text-slate-400">
+          Check your inbox — we&apos;ll also send weekly health updates for {shop}.
+        </p>
+      </motion.section>
+    );
+  }
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-16 rounded-2xl border border-white/10 bg-white/[0.02] p-8"
+    >
+      <div className="text-center">
+        <p className="font-display text-lg font-bold text-white">
+          📩 Get this report emailed to you
+        </p>
+        <p className="mt-2 text-sm text-slate-400">
+          Receive your full audit report + weekly health alerts. No spam, unsubscribe anytime.
+        </p>
+      </div>
+      <div className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row">
+        <input
+          type="email"
+          placeholder="you@yourstore.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
+        />
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={status === "loading" || !email.includes("@")}
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 text-sm font-bold text-black transition hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {status === "loading" ? "Sending..." : "Send my report"}
+          {status !== "loading" && <ArrowRight className="h-4 w-4" />}
+        </button>
+      </div>
+      {status === "error" && (
+        <p className="mt-3 text-center text-xs text-red-400">Something went wrong. Please try again.</p>
+      )}
+    </motion.section>
+  );
+}
+
 // ─── Results view ─────────────────────────────────────────────────────────────
 
 function ResultsView({
@@ -354,6 +434,13 @@ function ResultsView({
             </p>
           </section>
         )}
+
+        {/* Email capture */}
+        <EmailCapture
+          shop={shop}
+          score={result.preview_score}
+          issuesTotal={sortedIssues.length}
+        />
 
         {/* Locked modules */}
         <section className="mb-16">
