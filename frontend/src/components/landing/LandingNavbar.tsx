@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InstallLink } from "./InstallLink";
+import { BetaBanner } from "./BetaBanner";
 
 interface LandingNavbarProps {
   installHref: string;
@@ -37,6 +38,7 @@ export function LandingNavbar({ installHref }: LandingNavbarProps) {
           : "border-b border-transparent bg-transparent",
       )}
     >
+      <BetaBanner />
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <Link
           href="/"

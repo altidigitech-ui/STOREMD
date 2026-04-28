@@ -17,7 +17,6 @@ import { Testimonials } from "@/components/landing/Testimonials";
 import { FAQ } from "@/components/landing/FAQ";
 import { FooterCTA } from "@/components/landing/FooterCTA";
 import { Footer } from "@/components/landing/Footer";
-import { BetaBanner } from "@/components/landing/BetaBanner";
 
 interface LandingPageClientProps {
   installHref: string;
@@ -32,7 +31,6 @@ export function LandingPageClient({ installHref }: LandingPageClientProps) {
   return (
     <InstallModalContext.Provider value={{ openModal, installHref }}>
       <div className="relative min-h-screen bg-[#0a0a0f] font-sans text-slate-100 antialiased">
-        <BetaBanner />
         <LandingNavbar installHref={installHref} />
         <Hero installHref={installHref} />
         <section className="relative border-y border-white/5 bg-[#0a0a0f] py-14">
