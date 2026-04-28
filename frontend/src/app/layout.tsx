@@ -19,8 +19,20 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "StoreMD — Shopify Store Health",
-  description: "AI agent that monitors your Shopify store health 24/7",
+  description: "AI agent that monitors your Shopify store health 24/7. Free instant scan — no install required. Replaces 5 Shopify apps with one.",
   manifest: "/manifest.json",
+  metadataBase: new URL("https://storemd.vercel.app"),
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

@@ -1,0 +1,4 @@
+Contact: mailto:contact@altidigitech.com
+Preferred-Languages: en, fr
+Canonical: https://storemd.vercel.app/.well-known/security.txt
+Expires: 2027-04-26T00:00:00.000Z

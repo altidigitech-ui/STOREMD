@@ -1,4 +1,5 @@
 import { LandingPageClient } from "@/components/landing/LandingPageClient";
+import { JsonLd } from "@/components/landing/JsonLd";
 
 export const metadata = {
   title:
@@ -37,5 +38,10 @@ export default function LandingPage() {
     ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/install`
     : "/api/v1/auth/install";
 
-  return <LandingPageClient installHref={installHref} />;
+  return (
+    <>
+      <JsonLd />
+      <LandingPageClient installHref={installHref} />
+    </>
+  );
 }

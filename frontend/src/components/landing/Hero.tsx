@@ -21,7 +21,7 @@ export function Hero({ installHref }: HeroProps) {
         aria-hidden
       />
 
-      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-6 pb-24 pt-36 sm:pt-40 lg:grid-cols-[1.1fr_1fr] lg:pb-32 lg:pt-44">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-6 pb-24 pt-44 sm:pt-48 lg:grid-cols-[1.1fr_1fr] lg:pb-32 lg:pt-52">
         <div className="text-center lg:text-left">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
