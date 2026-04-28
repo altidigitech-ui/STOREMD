@@ -1,0 +1,28 @@
+# StoreMD
+
+> StoreMD is an AI-powered Shopify app that monitors store health 24/7. It replaces 5 separate apps (SEO, speed, accessibility, broken links, audit) with one agent that detects and fixes problems automatically. Free preview scan available — no install required.
+
+## Main Pages
+
+- [Home](https://storemd.vercel.app): Landing page — value proposition, features, pricing overview
+- [Free Store Audit](https://storemd.vercel.app/preview): Instant free scan of any Shopify store — SEO, security, performance, accessibility, broken links, robots.txt — no install needed
+- [Pricing](https://storemd.vercel.app/pricing): Three plans — Starter ($9/mo), Pro ($29/mo), Agency ($79/mo)
+- [Privacy Policy](https://storemd.vercel.app/privacy): Data handling, GDPR compliance, Shopify data access scope
+
+## Key Features
+
+- **Free Preview Scan**: 6 automated checks on any public Shopify storefront — no OAuth, no install, results in 30 seconds
+- **Ghost Billing Detection**: Finds Shopify apps you're paying for but not using
+- **App Impact Analysis**: Measures which installed apps slow your store down
+- **Code Residue Scanner**: Detects leftover code from uninstalled apps injected into your theme
+- **Listing Optimizer**: AI-powered product listing improvements for SEO
+- **Auto-Fix Engine**: One-click fixes for SEO, accessibility and broken links
+- **24/7 Monitoring**: Continuous health checks with instant alerts
+
+## Target Audience
+
+Shopify store owners, e-commerce managers, and Shopify agencies managing multiple stores.
+
+## Company
+
+Built by FoundryTwo (F2). Contact: [contact@altidigitech.com](mailto:contact@altidigitech.com)
