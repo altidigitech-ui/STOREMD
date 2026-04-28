@@ -301,6 +301,8 @@ class ApiClient {
       this.fetchWithAuth(`/api/v1/admin/errors`, { query: { limit } }),
     analytics: (): Promise<AdminAnalytics> =>
       this.fetchWithAuth(`/api/v1/admin/analytics`),
+    previewLeads: (limit: number = 50): Promise<{ leads: AdminPreviewLead[] }> =>
+      this.fetchWithAuth(`/api/v1/admin/preview-leads`, { query: { limit } }),
   };
 }
 
@@ -338,6 +340,9 @@ export interface AdminOverview {
   unique_visitors_today: number;
   installs_today: number;
   conversion_rate: number;
+  total_preview_leads: number;
+  preview_leads_today: number;
+  preview_leads_this_week: number;
 }
 
 export interface AdminMerchant {
@@ -371,6 +376,15 @@ export interface AdminError {
   shop_domain: string | null;
   processing_error: string | null;
   retry_count: number;
+  created_at: string;
+}
+
+export interface AdminPreviewLead {
+  id: string;
+  email: string;
+  shop_domain: string;
+  score: number | null;
+  issues_total: number;
   created_at: string;
 }
 

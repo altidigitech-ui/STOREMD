@@ -35,6 +35,7 @@ PUBLIC_PATHS = frozenset(
         "/api/v1/tracking/pageview",
         "/api/v1/tracking/event",
         "/api/v1/preview/scan",
+        "/api/v1/preview/capture-email",
         "/docs",
         "/openapi.json",
     }

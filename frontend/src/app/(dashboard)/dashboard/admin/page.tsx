@@ -10,6 +10,7 @@ import {
   type AdminError,
   type AdminMerchant,
   type AdminOverview,
+  type AdminPreviewLead,
   type AdminScan,
 } from "@/lib/api";
 
@@ -19,6 +20,7 @@ interface AdminData {
   scans: AdminScan[];
   errors: AdminError[];
   analytics: AdminAnalytics;
+  previewLeads: AdminPreviewLead[];
 }
 
 function formatDate(iso: string): string {
@@ -147,14 +149,21 @@ export default function AdminPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [overview, merchantsResp, scansResp, errorsResp, analytics] =
-          await Promise.all([
-            api.admin.overview(),
-            api.admin.merchants(),
-            api.admin.scans(50),
-            api.admin.errors(50),
-            api.admin.analytics(),
-          ]);
+        const [
+          overview,
+          merchantsResp,
+          scansResp,
+          errorsResp,
+          analytics,
+          previewLeadsResp,
+        ] = await Promise.all([
+          api.admin.overview(),
+          api.admin.merchants(),
+          api.admin.scans(50),
+          api.admin.errors(50),
+          api.admin.analytics(),
+          api.admin.previewLeads(50),
+        ]);
         if (cancelled) return;
         setData({
           overview,
@@ -162,6 +171,7 @@ export default function AdminPage() {
           scans: scansResp.scans,
           errors: errorsResp.errors,
           analytics,
+          previewLeads: previewLeadsResp.leads,
         });
       } catch (err) {
         if (!cancelled) setError((err as Error).message);
@@ -202,7 +212,7 @@ export default function AdminPage() {
     );
   }
 
-  const { overview, merchants, scans, errors, analytics } = data;
+  const { overview, merchants, scans, errors, analytics, previewLeads } = data;
 
   return (
     <div>
@@ -246,6 +256,14 @@ export default function AdminPage() {
           label="Conversion Rate"
           value={`${overview.conversion_rate}%`}
           sublabel="installs / unique visitors today"
+        />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Kpi
+          label="Email Leads"
+          value={overview.total_preview_leads}
+          sublabel={`${overview.preview_leads_today} today / ${overview.preview_leads_this_week} this week`}
         />
       </div>
 
@@ -314,6 +332,19 @@ export default function AdminPage() {
             s.status,
             s.duration_seconds ?? "—",
             formatDate(s.created_at),
+          ])}
+        />
+      </Section>
+
+      <Section title="Preview Leads (email captured)">
+        <Table
+          headers={["Email", "Domain", "Score", "Issues", "Created"]}
+          rows={previewLeads.map((l) => [
+            l.email,
+            l.shop_domain,
+            l.score ?? "—",
+            l.issues_total,
+            formatDate(l.created_at),
           ])}
         />
       </Section>

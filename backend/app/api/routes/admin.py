@@ -188,6 +188,13 @@ async def admin_overview(merchant: dict = Depends(get_admin_merchant)) -> dict:
         "unique_visitors_today": unique_visitors_today,
         "installs_today": installs_today,
         "conversion_rate": conversion_rate,
+        "total_preview_leads": _count_table(supabase, "preview_leads"),
+        "preview_leads_today": _count_table(
+            supabase, "preview_leads", gte_col="created_at", gte_value=today.isoformat()
+        ),
+        "preview_leads_this_week": _count_table(
+            supabase, "preview_leads", gte_col="created_at", gte_value=week_ago.isoformat()
+        ),
     }
 
 
@@ -419,3 +426,22 @@ async def admin_analytics(merchant: dict = Depends(get_admin_merchant)) -> dict:
             "installs_total": installs_total,
         },
     }
+
+
+@router.get("/preview-leads")
+async def admin_preview_leads(
+    limit: int = 50,
+    merchant: dict = Depends(get_admin_merchant),
+) -> dict:
+    _require_admin(merchant)
+    supabase = get_supabase_service()
+    limit = max(1, min(limit, 200))
+
+    res = (
+        supabase.table("preview_leads")
+        .select("id,email,shop_domain,score,issues_total,created_at")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return {"leads": res.data or []}
