@@ -179,7 +179,7 @@ function LoadingView({ shop }: { shop: string }) {
 
 // ─── Error state ──────────────────────────────────────────────────────────────
 
-function ErrorView({ shop, message, installHref }: { shop: string; message: string; installHref: string }) {
+function ErrorView({ shop, message }: { shop: string; message: string }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#0a0a0f] px-6 text-slate-100">
       <div className="flex max-w-md flex-col items-center gap-6 text-center">
@@ -194,18 +194,18 @@ function ErrorView({ shop, message, installHref }: { shop: string; message: stri
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+            className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-cyan-400"
           >
             <RotateCcw className="h-4 w-4" />
             Try again
           </button>
-          <a
-            href={`${installHref}?shop=${encodeURIComponent(shop)}`}
-            className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-cyan-400"
+          <button
+            type="button"
+            onClick={() => { window.location.href = "/"; }}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
           >
-            Install directly
-            <ArrowRight className="h-4 w-4" />
-          </a>
+            Try another store
+          </button>
         </div>
       </div>
     </div>
@@ -484,7 +484,7 @@ export function PreviewClient() {
   }
 
   if (result.error) {
-    return <ErrorView shop={shop} message={result.error} installHref={installHref} />;
+    return <ErrorView shop={shop} message={result.error} />;
   }
 
   return <ResultsView result={result} shop={shop} installHref={installHref} />;
