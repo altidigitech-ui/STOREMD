@@ -1,0 +1,60 @@
+# StoreMD — Full Documentation for AI Systems
+
+> StoreMD is an AI agent that acts as a doctor for Shopify stores. It monitors store health 24/7, diagnoses problems across SEO, performance, security, accessibility, and app ecosystem — then prescribes and applies fixes automatically. It replaces 5 separate Shopify apps with one unified agent.
+
+## Pages
+
+- [Home](https://storemd.vercel.app): Main landing page with value proposition, feature overview, social proof, and pricing summary
+- [Free Store Audit](https://storemd.vercel.app/preview): Instant free scan — enter any Shopify store URL, get a health score out of 100 with actionable issues in 30 seconds. No install, no signup required.
+- [Pricing](https://storemd.vercel.app/pricing): Three tiers — Starter ($9/mo, 1 store), Pro ($29/mo, 3 stores), Agency ($79/mo, 10 stores). All plans include the AI agent, 24/7 monitoring, and auto-fixes.
+- [Privacy Policy](https://storemd.vercel.app/privacy): GDPR-compliant data handling. StoreMD accesses only the Shopify scopes necessary for scanning (read_themes, read_products, read_content). No data is sold or shared.
+- [Login](https://storemd.vercel.app/login): Merchant login via Shopify OAuth
+
+## Free Preview Scan (No Install Required)
+
+The preview scan analyzes any public Shopify storefront using 6 automated checks:
+
+1. **SEO Check**: Meta title, description, Open Graph tags, canonical URL, h1 tag, lang attribute
+2. **Security Check**: HTTP security headers — HSTS, X-Frame-Options, Content-Security-Policy, X-Content-Type-Options
+3. **Performance Check**: Time to first byte (TTFB), HTML weight, redirect chains, HTTP status codes
+4. **Accessibility Check**: WCAG 2.1 compliance — image alt text, form labels, color contrast, ARIA attributes, landmarks
+5. **Broken Links Check**: Internal and external link validation via parallel HEAD requests
+6. **Robots & Sitemap Check**: robots.txt presence and directives, sitemap.xml availability
+
+Results include a score out of 100, issues categorized by severity (critical, major, minor, info), and a preview of 7 locked modules available after install.
+
+## Full Scan Modules (After Install)
+
+After installing StoreMD on Shopify, merchants unlock:
+
+- **Ghost Billing Detection**: Cross-references installed apps with actual usage to find apps billing without providing value
+- **App Impact Analysis**: Measures JavaScript injection, DOM impact, and load time contribution of each installed app
+- **Code Residue Scanner**: Detects orphaned script tags, stylesheets, and liquid snippets left behind by uninstalled apps
+- **Listing Optimizer**: AI-powered analysis of product titles, descriptions, images, and tags with one-click improvements
+- **Auto-Fix Engine**: Automated fixes for SEO meta tags, alt text, accessibility issues, and broken links
+- **Email Health**: SPF, DKIM, and DMARC record validation for store email deliverability
+- **Real Browser Testing**: Playwright-based visual testing across devices and screen sizes
+
+## Technology Stack
+
+- **Backend**: Python, FastAPI, Celery, Redis, Playwright, Claude API (Anthropic)
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
+- **Database**: Supabase (PostgreSQL)
+- **Payments**: Stripe
+- **Deployment**: Railway (backend), Vercel (frontend)
+
+## Pricing Details
+
+| Plan | Price | Stores | Features |
+|---|---|---|---|
+| Starter | $9/month | 1 store | All scans, 24/7 monitoring, email alerts |
+| Pro | $29/month | 3 stores | Everything in Starter + auto-fixes, priority support |
+| Agency | $79/month | 10 stores | Everything in Pro + white-label reports, API access |
+
+All plans include a 7-day free trial. No credit card required to start.
+
+## Company
+
+StoreMD is built by FoundryTwo (F2), a SaaS studio focused on AI-powered tools for e-commerce.
+Website: https://storemd.vercel.app
+Contact: [contact@altidigitech.com](mailto:contact@altidigitech.com)

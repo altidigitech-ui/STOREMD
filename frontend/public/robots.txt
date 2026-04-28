@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /onboarding/
+Disallow: /auth/
+Disallow: /login/
+Disallow: /api/
+
+Sitemap: https://storemd.vercel.app/sitemap.xml
